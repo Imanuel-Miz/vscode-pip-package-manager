@@ -1,0 +1,158 @@
+{
+  "name": "pip-package-manager",
+  "displayName": "Pip Package Manager",
+  "description": "Manage Python pip packages",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration":[
+      {
+        "title": "pipPackageManager",
+        "properties": {
+          "pipPackageManager.followSymbolicLinks": {
+            "type": "boolean",
+            "default": false,
+            "description": "Follow Symbolic Links while searching through files or folders. Default: false"
+          }
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "pip-package-manager.refreshFolders",
+        "title": "Refresh Folders",
+        "icon": {"light": "./refresh_button_light.svg", "dark": "./refresh_button_dark.svg"}
+      },
+      {
+        "command": "pip-package-manager.refreshFolder",
+        "title": "Scan Python dependencies for project folder",
+        "shortTitle": "Scan folder"
+      },
+      {
+        "command": "pip-package-manager.setFolderInterpreter",
+        "title": "Set Python Interpreter for project folder",
+        "shortTitle": "Set Python Interpreter"
+      },
+      {
+        "command": "pip-package-manager.installMissingPackages",
+        "title": "Install missing packages"
+      },
+      {
+        "command": "pip-package-manager.installPackages",
+        "title": "Install selected package"
+      },
+      {
+        "command": "pip-package-manager.installPypiPackage",
+        "title": "Install Python package from Pypi for project folder"
+      },
+      {
+        "command": "pip-package-manager.updatePackage",
+        "title": "Update selected pip package to latest"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "pip-package-manager.refreshFolders",
+          "when": "view == pipPackageManager",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "pip-package-manager.refreshFolder",
+          "when": "view == 'pipPackageManager' && viewItem == FolderView",
+          "group": "pip-package-manager@0"
+        },
+        {
+          "command": "pip-package-manager.setFolderInterpreter",
+          "when": "view == pipPackageManager && viewItem == FolderView",
+          "group": "pip-package-manager@1"
+        },
+        {
+          "command": "pip-package-manager.installPypiPackage",
+          "when": "view == pipPackageManager && viewItem == FolderView",
+          "group": "pip-package-manager@2"
+        },
+        {
+          "command": "pip-package-manager.installMissingPackages",
+          "when": "view == pipPackageManager && viewItem == missingPythonPackageCollection",
+          "group": "pip-package-manager@1"
+        },
+        {
+          "command": "pip-package-manager.installPackages",
+          "when": "viewItem == missingPythonPackage",
+          "group": "pip-package-manager@0"
+        },
+        {
+          "command": "pip-package-manager.updatePackage",
+          "when": "viewItem == installedPythonPackage",
+          "group": "pip-package-manager@0"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "pip-package-explorer",
+          "title": "Pip Package Manager",
+          "icon": "./activity-bar-logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "pip-package-explorer": [
+        {
+          "id": "pipPackageManager",
+          "name": "Pip Package Manager",
+          "contextualTitle": "Pip Package Manager"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^24.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-typescript": "^11.0.0",
+    "@types/glob": "^8.0.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@vscode/test-electron": "^2.2.0",
+    "antlr4": "^4.12.0",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.1.0",
+    "typescript": "^4.9.3"
+  },
+  "dependencies": {
+    "axios": "^1.3.6",
+    "cheerio": "^1.0.0-rc.12",
+    "fs-extra": "^11.1.1",
+    "is-hidden-file": "^1.1.2",
+    "jsdom": "^21.1.1",
+    "playwright": "^1.33.0",
+    "python-ast": "^0.1.0",
+    "tslib": "^2.4.1",
+    "url-exist": "^3.0.0"
+  },
+  "extensionDependencies": [
+    "ms-python.python",
+    "ms-python.vscode-pylance"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:**/*.py"
+  ]
+}
