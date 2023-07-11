@@ -23,6 +23,10 @@ This is a [Visual Studio Code](https://code.visualstudio.com/) [extension](https
 3. This will result in a list of all imports (according to the criteria: *installed*, *missing*, *private*).
 **Note**: If we were unable to find any missing imports, you will not see a list of: *missing*.
 
+
+## Notes
+Under the hood, the extension utilize the [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) and [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) extensions. You will not be able to run this extension without it.
+
 ## Extension Settings
 
 This extension contributes the following settings:
