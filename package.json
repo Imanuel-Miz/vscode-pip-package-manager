@@ -57,6 +57,10 @@
       {
         "command": "pip-package-manager.updatePackage",
         "title": "Update selected pip package to latest"
+      },
+      {
+        "command": "pip-package-manager.unInstallPypiPackage",
+        "title": "Uninstall selected pip package"
       }
     ],
     "menus": {
@@ -97,6 +101,11 @@
           "command": "pip-package-manager.updatePackage",
           "when": "viewItem == installedPythonPackage",
           "group": "pip-package-manager@0"
+        },
+        {
+          "command": "pip-package-manager.unInstallPypiPackage",
+          "when": "viewItem == installedPythonPackage",
+          "group": "pip-package-manager@1"
         }
       ]
     },

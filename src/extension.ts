@@ -18,6 +18,7 @@ function activate(context: any) {
 	vscode.commands.registerCommand('pip-package-manager.installPackages', async (pythonPackage) => await treeViewUtils.installPackage(pythonPackage));
 	vscode.commands.registerCommand('pip-package-manager.installPypiPackage', async (folder) => await treeViewUtils.installPypiPackage(folder));
 	vscode.commands.registerCommand('pip-package-manager.updatePackage', async (pythonPackage) => await treeViewUtils.updatePackage(pythonPackage));
+	vscode.commands.registerCommand('pip-package-manager.unInstallPypiPackage', async (pythonPackage) => await treeViewUtils.unInstallPypiPackage(pythonPackage));
 
 }
 module.exports = {
