@@ -279,11 +279,11 @@ function getActivePythonPath(pythonInterpreterPath: string): string {
 }
 
 export async function installMissingPackages(pythonPackageCollection: treeItems.pythonPackageCollection) {
-  _installSelectedPackages(pythonPackageCollection.folderVenv, pythonPackageCollection.pythonPackages)
+  await _installSelectedPackages(pythonPackageCollection.folderVenv, pythonPackageCollection.pythonPackages)
 }
 
 export async function installPackage(pythonPackage: treeItems.pythonPackage) {
-  _installSelectedPackages(pythonPackage.folderVenv, [pythonPackage])
+  await _installSelectedPackages(pythonPackage.folderVenv, [pythonPackage])
 }
 
 export async function installPypiPackage(folderView: treeItems.FoldersView) {
@@ -326,35 +326,29 @@ function _installPypiPackageTerminal(folderVenv: string, pypiPackageName: string
   terminal.sendText(installSyntax);
 }
 
-async function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
-  const activePythonPath = getActivePythonPath(folderVenv)
+async function _getInstalledPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]): Promise<string[]> {
   const packagesToInstall: string[] = [];
-  const installedPackages: string[] = [];
-  await _getInstalledPackages();
-  await _runInstallPackages();
-  vscode.window.showInformationMessage(`Successfully installed python packages: ${installedPackages.join(', ')}`)
-
-  async function _runInstallPackages() {
-    if (packagesToInstall.length > 0) {
-      const terminal = vscode.window.createTerminal();
-      terminal.show();
-      terminal.sendText(`source ${activePythonPath}`);
-      for (var packageToInstall of packagesToInstall) {
-        terminal.sendText(`pip3 install ${packageToInstall}`);
-        installedPackages.push(packageToInstall);
-      }
+  for (var pythonPackage of selectedPackages) {
+    const cmd = `${folderVenv} -c "import ${pythonPackage.pipPackageName}"`;
+    try {
+      cp.execSync(cmd, { encoding: 'utf-8' });
+    }
+    catch (error) {
+      packagesToInstall.push(pythonPackage.pipPackageName);
     }
   }
+  return packagesToInstall
+}
 
-  async function _getInstalledPackages() {
-    for (var pythonPackage of selectedPackages) {
-      const cmd = `${folderVenv} -c "import ${pythonPackage.pipPackageName}"`;
-      try {
-        cp.execSync(cmd, { encoding: 'utf-8' });
-      }
-      catch (error) {
-        packagesToInstall.push(pythonPackage.pipPackageName);
-      }
+async function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
+  const activePythonPath = getActivePythonPath(folderVenv)
+  const packagesToInstall = await _getInstalledPackages(folderVenv, selectedPackages);
+  if (packagesToInstall.length > 0) {
+    const terminal = vscode.window.createTerminal();
+    terminal.show();
+    terminal.sendText(`source ${activePythonPath}`);
+    for (var packageToInstall of packagesToInstall) {
+      terminal.sendText(`pip3 install ${packageToInstall}`);
     }
   }
 }
