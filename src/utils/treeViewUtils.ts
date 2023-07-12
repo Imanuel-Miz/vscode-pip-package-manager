@@ -18,7 +18,6 @@ function checkFolderForPyFiles(folderPath: string): boolean {
 
 export function enrichInfoFromPythonExtension(folderViews: treeItems.FoldersView[], pythonExtensionConfig: vscode.Extension<any>) {
   folderViews.forEach((folderView) => {
-    console.log(`iconPath is: ${JSON.stringify(folderView.iconPath, undefined, 4)}`)
     for (let key in pythonExtensionConfig.exports.environments["known"]) {
       let env_info = pythonExtensionConfig.exports.environments["known"][key];
       try {
@@ -26,9 +25,13 @@ export function enrichInfoFromPythonExtension(folderViews: treeItems.FoldersView
           folderView.folderVenv = env_info["internal"]["path"]
         }
       } catch (error) {
-        vscode.window.showErrorMessage(`Unable to find folder data for ${folderView.folderName}, please try to attach Venv / Python interpreter manually`)
         continue
       }
+    }
+  })
+  folderViews.forEach((folderView) => {
+    if (!folderView.folderVenv) {
+      vscode.window.showWarningMessage(`Unable to find Python interpreter for workspace: ${folderView.folderName}, please attach a Python interpreter manually`)
     }
   })
 }
