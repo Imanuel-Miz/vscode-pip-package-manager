@@ -4,6 +4,7 @@ import * as glob from 'glob';
 import * as cp from 'child_process';
 import axios from 'axios';
 import * as treeItems from '../treeView/TreeItems'
+import * as cliCommands from './cliCommands'
 const extensionConfig = vscode.workspace.getConfiguration('pipPackageManager')
 const followSymbolicLinks: boolean = extensionConfig.get('followSymbolicLinks')
 
@@ -121,7 +122,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
   console.log(`Starting get package collections`)
   for (const packageName of ProjectDependencies) {
     console.log(`Starting check for package: ${packageName}`);
-    const cmd = `${folderVenv} -c "import ${packageName}"`;
+    const cmd = cliCommands.getImportCmd(folderVenv, packageName);
     try {
       cp.execSync(cmd, { encoding: 'utf-8' });
     }
@@ -201,7 +202,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
 
 
 export async function getPythonPackageNumber(pythonPackageName: string): Promise<string | undefined> {
-  const cmd = `pip show ${pythonPackageName}`;
+  const cmd = cliCommands.getPipShowCmd(pythonPackageName);
   console.log(`About to run show pip for package: ${pythonPackageName}`)
   try {
     let stdout = cp.execSync(cmd, { encoding: 'utf-8' });
@@ -318,22 +319,18 @@ export async function installPypiPackage(folderView: treeItems.FoldersView) {
   _installPypiPackageTerminal(folderView.folderVenv, pypiPackageName, pypiPackageVersion)
 }
 
-function _installPypiPackageTerminal(folderVenv: string, pypiPackageName: string, pypiPackageVersion?: string) {
-  let installSyntax = `pip3 install ${pypiPackageName}`
-  if (pypiPackageVersion) {
-    installSyntax += `==${pypiPackageVersion}`
-  }
+async function _installPypiPackageTerminal(folderVenv: string, pypiPackageName: string, pypiPackageVersion?: string) {
   const activePythonPath = getActivePythonPath(folderVenv)
-  const terminal = vscode.window.createTerminal();
-  terminal.show();
-  terminal.sendText(`source ${activePythonPath}`);
-  terminal.sendText(installSyntax);
+  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath)
+  let installCliCommand = cliCommands.getPipInstallCmd(pypiPackageName, pypiPackageVersion)
+  await cliCommands.safeRunCliCmd(sourceCliCommand, true)
+  await cliCommands.safeRunCliCmd(installCliCommand, true)
 }
 
 async function _getInstalledPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]): Promise<string[]> {
   const packagesToInstall: string[] = [];
   for (var pythonPackage of selectedPackages) {
-    const cmd = `${folderVenv} -c "import ${pythonPackage.pipPackageName}"`;
+    let cmd = cliCommands.getImportCmd(folderVenv, pythonPackage.pipPackageName);
     try {
       cp.execSync(cmd, { encoding: 'utf-8' });
     }
@@ -346,22 +343,23 @@ async function _getInstalledPackages(folderVenv: string, selectedPackages: treeI
 
 async function _unInstallSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
   const activePythonPath = getActivePythonPath(folderVenv)
-  const terminal = vscode.window.createTerminal();
-  terminal.sendText(`source ${activePythonPath}`);
+  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath)
+  await cliCommands.safeRunCliCmd(sourceCliCommand, true)
   for (var pipPackage of selectedPackages) {
-    terminal.sendText(`pip3 uninstall ${pipPackage.pipPackageName}`);
+    let unInstallPypiPackageCliCmd = cliCommands.getPipUnInstallCmd(pipPackage.pipPackageName)
+    await cliCommands.safeRunCliCmd(unInstallPypiPackageCliCmd, true)
   }
 }
 
 async function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
   const activePythonPath = getActivePythonPath(folderVenv)
+  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath)
   const packagesToInstall = await _getInstalledPackages(folderVenv, selectedPackages);
   if (packagesToInstall.length > 0) {
-    const terminal = vscode.window.createTerminal();
-    terminal.show();
-    terminal.sendText(`source ${activePythonPath}`);
+    await cliCommands.safeRunCliCmd(sourceCliCommand, true)
     for (var packageToInstall of packagesToInstall) {
-      terminal.sendText(`pip3 install ${packageToInstall}`);
+      let InstallPypiPackageCliCmd = cliCommands.getPipInstallCmd(packageToInstall)
+      await cliCommands.safeRunCliCmd(InstallPypiPackageCliCmd, true)
     }
   }
 }
@@ -370,13 +368,14 @@ export async function updatePackage(pythonPackage: treeItems.pythonPackage) {
   _updateSelectedPackages(pythonPackage.folderVenv, [pythonPackage])
 }
 
-function _updateSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
+async function _updateSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
   const activePythonPath = getActivePythonPath(folderVenv)
+  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath)
   const packagesCannotUpdate: string[] = [];
   const packagesToUpdate: string[] = [];
   const updatedPackages: string[] = [];
   for (var pythonPackage of selectedPackages) {
-    const cmd = `${folderVenv} -c "import ${pythonPackage.pipPackageName}"`;
+    let cmd = cliCommands.getImportCmd(folderVenv, pythonPackage.pipPackageName);
     try {
       cp.execSync(cmd, { encoding: 'utf-8' });
       packagesToUpdate.push(pythonPackage.pipPackageName)
@@ -386,11 +385,11 @@ function _updateSelectedPackages(folderVenv: string, selectedPackages: treeItems
     }
   }
   if (packagesToUpdate.length > 0) {
-    const terminal = vscode.window.createTerminal();
-    terminal.sendText(`source ${activePythonPath}`);
-    for (var packageToInstall of packagesToUpdate) {
-      terminal.sendText(`pip3 install --upgrade ${packageToInstall}`);
-      updatedPackages.push(packageToInstall)
+    await cliCommands.safeRunCliCmd(sourceCliCommand, true)
+    for (var packageToUpgrade of packagesToUpdate) {
+      let pipUpgradeCmd = cliCommands.getPipUpgradeCmd(packageToUpgrade)
+      await cliCommands.safeRunCliCmd(pipUpgradeCmd, true)
+      updatedPackages.push(packageToUpgrade)
     }
   }
   vscode.window.showInformationMessage(`Successfully updated python packages: ${updatedPackages.join(', ')}`)
