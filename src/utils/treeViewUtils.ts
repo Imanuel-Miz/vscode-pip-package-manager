@@ -321,32 +321,42 @@ function _installPypiPackageTerminal(folderVenv: string, pypiPackageName: string
   }
   const activePythonPath = getActivePythonPath(folderVenv)
   const terminal = vscode.window.createTerminal();
+  terminal.show();
   terminal.sendText(`source ${activePythonPath}`);
   terminal.sendText(installSyntax);
 }
 
-function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
+async function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
   const activePythonPath = getActivePythonPath(folderVenv)
   const packagesToInstall: string[] = [];
   const installedPackages: string[] = [];
-  for (var pythonPackage of selectedPackages) {
-    const cmd = `${folderVenv} -c "import ${pythonPackage.pipPackageName}"`;
-    try {
-      cp.execSync(cmd, { encoding: 'utf-8' });
-    }
-    catch (error) {
-      packagesToInstall.push(pythonPackage.pipPackageName)
-    }
-  }
-  if (packagesToInstall.length > 0) {
-    const terminal = vscode.window.createTerminal();
-    terminal.sendText(`source ${activePythonPath}`);
-    for (var packageToInstall of packagesToInstall) {
-      terminal.sendText(`pip3 install ${packageToInstall}`);
-      installedPackages.push(packageToInstall)
-    }
-  }
+  await _getInstalledPackages();
+  await _runInstallPackages();
   vscode.window.showInformationMessage(`Successfully installed python packages: ${installedPackages.join(', ')}`)
+
+  async function _runInstallPackages() {
+    if (packagesToInstall.length > 0) {
+      const terminal = vscode.window.createTerminal();
+      terminal.show();
+      terminal.sendText(`source ${activePythonPath}`);
+      for (var packageToInstall of packagesToInstall) {
+        terminal.sendText(`pip3 install ${packageToInstall}`);
+        installedPackages.push(packageToInstall);
+      }
+    }
+  }
+
+  async function _getInstalledPackages() {
+    for (var pythonPackage of selectedPackages) {
+      const cmd = `${folderVenv} -c "import ${pythonPackage.pipPackageName}"`;
+      try {
+        cp.execSync(cmd, { encoding: 'utf-8' });
+      }
+      catch (error) {
+        packagesToInstall.push(pythonPackage.pipPackageName);
+      }
+    }
+  }
 }
 
 export async function updatePackage(pythonPackage: treeItems.pythonPackage) {
