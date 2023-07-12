@@ -1,7 +1,10 @@
 {
   "name": "pip-package-manager",
   "displayName": "Pip Package Manager",
-  "description": "Manage Python pip packages",
+  "description": "Manage Python pip packages dependencies",
+  "repository": {
+    "url": "https://github.com/Imanuel-Miz/vscode-pip-package-manager"
+  },
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.74.0"
@@ -27,7 +30,7 @@
       {
         "command": "pip-package-manager.refreshFolders",
         "title": "Refresh Folders",
-        "icon": {"light": "./refresh_button_light.svg", "dark": "./refresh_button_dark.svg"}
+        "icon": {"light": "./refresh_button_light.png", "dark": "./refresh_button_dark.png"}
       },
       {
         "command": "pip-package-manager.refreshFolder",
@@ -102,7 +105,7 @@
         {
           "id": "pip-package-explorer",
           "title": "Pip Package Manager",
-          "icon": "./activity-bar-logo.svg"
+          "icon": "./activity-bar-logo.png"
         }
       ]
     },

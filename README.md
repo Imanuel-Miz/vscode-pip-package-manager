@@ -1,6 +1,6 @@
 # Pip Package Manger Extension
 
-![Extension Logo](pip-manager-main.svg)
+![Extension Logo](pip-manager-main.png)
 
 ## Description
 
