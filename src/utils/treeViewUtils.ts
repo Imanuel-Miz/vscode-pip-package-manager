@@ -286,6 +286,10 @@ export async function installPackage(pythonPackage: treeItems.pythonPackage) {
   await _installSelectedPackages(pythonPackage.folderVenv, [pythonPackage])
 }
 
+export async function unInstallPypiPackage(pythonPackage: treeItems.pythonPackage) {
+  await _unInstallSelectedPackages(pythonPackage.folderVenv, [pythonPackage])
+}
+
 export async function installPypiPackage(folderView: treeItems.FoldersView) {
   if (!folderView.folderVenv) {
     vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
@@ -338,6 +342,15 @@ async function _getInstalledPackages(folderVenv: string, selectedPackages: treeI
     }
   }
   return packagesToInstall
+}
+
+async function _unInstallSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
+  const activePythonPath = getActivePythonPath(folderVenv)
+  const terminal = vscode.window.createTerminal();
+  terminal.sendText(`source ${activePythonPath}`);
+  for (var pipPackage of selectedPackages) {
+    terminal.sendText(`pip3 uninstall ${pipPackage.pipPackageName}`);
+  }
 }
 
 async function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
