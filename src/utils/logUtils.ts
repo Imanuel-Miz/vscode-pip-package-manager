@@ -1,5 +1,5 @@
 import { window } from 'vscode';
-const outputChannel = window.createOutputChannel('pip-package-manager-outputs', 'typescript');
+const outputChannel = window.createOutputChannel('Pip Package Manager', 'rust');
 
 export enum logType {
     ERROR = 'ERROR',
