@@ -27,6 +27,7 @@ export class FoldersView extends BaseFoldersView {
     public folderVenv: string | undefined,
     public readonly folderFsPath: string | undefined,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
+    public isVenv?: boolean,
     public children?: pythonPackageCollection[] | undefined
   ) {
     super(folderName, collapsibleState)

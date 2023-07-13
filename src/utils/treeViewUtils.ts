@@ -19,13 +19,25 @@ function checkFolderForPyFiles(folderPath: string): boolean {
   return pythonFiles.length > 0;
 }
 
+export function isVirtualEnvironment(interpreterPath?: string): boolean | null {
+  if (interpreterPath) {
+    const virtualEnvFolder = interpreterPath.split('/bin')[0];
+    const pyvenvCfgPath = `${virtualEnvFolder}/pyvenv.cfg`;
+    const isVirtualEnv = fs.existsSync(pyvenvCfgPath);
+    return isVirtualEnv;
+  }
+  return null
+}
+
 export function enrichInfoFromPythonExtension(folderViews: treeItems.FoldersView[], pythonExtensionConfig: vscode.Extension<any>) {
   folderViews.forEach((folderView) => {
     for (let key in pythonExtensionConfig.exports.environments["known"]) {
       let env_info = pythonExtensionConfig.exports.environments["known"][key];
       try {
         if (env_info["internal"]["environment"]["workspaceFolder"]["name"] === folderView.folderName) {
-          folderView.folderVenv = env_info["internal"]["path"]
+          let folderVenv = env_info["internal"]["path"]
+          folderView.folderVenv = folderVenv
+          folderView.isVenv = isVirtualEnvironment(folderVenv)
         }
       } catch (error) {
         continue
@@ -282,7 +294,7 @@ export async function getUserInput(prompt?: string, placeHolder?: string, valida
 }
 
 function getActivePythonPath(pythonInterpreterPath: string): string {
-  const wordsToReplace = ["python", "python3"];
+  const wordsToReplace = ["\\bpython\\b", "\\bpython3\\b"];
   const pattern = new RegExp(wordsToReplace.join("|"), "g");
   const replacedPath = pythonInterpreterPath.replace(pattern, "activate");
   logUtils.sendOutputLogToChannel(`Path to run activate for env is: ${replacedPath}`, logUtils.logType.INFO)
@@ -330,18 +342,25 @@ export async function installPypiPackage(folderView: treeItems.FoldersView) {
     logUtils.sendOutputLogToChannel(`No version was provided for ${pypiPackageName} will install the latest version`, logUtils.logType.WARNING)
     vscode.window.showWarningMessage(`No version was provided for ${pypiPackageName} will install the latest version`)
   }
-  _installPypiPackageTerminal(folderView.folderVenv, pypiPackageName, pypiPackageVersion)
+  _installPypiPackageTerminal(folderView.folderVenv, folderView.isVenv, pypiPackageName, pypiPackageVersion)
 }
 
-async function _installPypiPackageTerminal(folderVenv: string, pypiPackageName: string, pypiPackageVersion?: string) {
-  const activePythonPath = getActivePythonPath(folderVenv)
-  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath)
+async function _installPypiPackageTerminal(folderVenv: string, isVirtrualEnv: boolean, pypiPackageName: string, pypiPackageVersion?: string) {
   let installCliCommand = cliCommands.getPipInstallCmd(pypiPackageName, pypiPackageVersion)
-  await cliCommands.safeRunCliCmd(sourceCliCommand, true)
+  if (isVirtrualEnv) {
+    await _runSourceForVenv(folderVenv);
+  }
   await cliCommands.safeRunCliCmd(installCliCommand, true)
   const finishedLog = `Finished installing : ${pypiPackageName}`
   logUtils.sendOutputLogToChannel(finishedLog, logUtils.logType.INFO)
   vscode.window.showInformationMessage(finishedLog)
+}
+
+async function _runSourceForVenv(folderVenv: string) {
+  logUtils.sendOutputLogToChannel(`${folderVenv} is a virtual env, running source command`, logUtils.logType.INFO);
+  const activePythonPath = getActivePythonPath(folderVenv);
+  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath);
+  await cliCommands.safeRunCliCmd(sourceCliCommand, true);
 }
 
 async function _getInstalledPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]): Promise<string[]> {
@@ -359,9 +378,10 @@ async function _getInstalledPackages(folderVenv: string, selectedPackages: treeI
 }
 
 async function _unInstallSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
-  const activePythonPath = getActivePythonPath(folderVenv)
-  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath)
-  await cliCommands.safeRunCliCmd(sourceCliCommand, true)
+  const isVenv = isVirtualEnvironment(folderVenv)
+  if (isVenv) {
+    await _runSourceForVenv(folderVenv);
+  }
   for (var pipPackage of selectedPackages) {
     let unInstallPypiPackageCliCmd = cliCommands.getPipUnInstallCmd(pipPackage.pipPackageName)
     await cliCommands.safeRunCliCmd(unInstallPypiPackageCliCmd, true)
@@ -371,12 +391,13 @@ async function _unInstallSelectedPackages(folderVenv: string, selectedPackages: 
 }
 
 async function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
-  const activePythonPath = getActivePythonPath(folderVenv)
-  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath)
+  const isVenv = isVirtualEnvironment(folderVenv)
+  if (isVenv) {
+    await _runSourceForVenv(folderVenv);
+  }
   const packagesToInstall = await _getInstalledPackages(folderVenv, selectedPackages);
   logUtils.sendOutputLogToChannel(`Pypi packages to install are: ${packagesToInstall.join(', ')}`, logUtils.logType.INFO)
   if (packagesToInstall.length > 0) {
-    await cliCommands.safeRunCliCmd(sourceCliCommand, true)
     for (var packageToInstall of packagesToInstall) {
       let InstallPypiPackageCliCmd = cliCommands.getPipInstallCmd(packageToInstall)
       await cliCommands.safeRunCliCmd(InstallPypiPackageCliCmd, true)
@@ -390,8 +411,6 @@ export async function updatePackage(pythonPackage: treeItems.pythonPackage) {
 }
 
 async function _updateSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
-  const activePythonPath = getActivePythonPath(folderVenv)
-  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath)
   const packagesCannotUpdate: string[] = [];
   const packagesToUpdate: string[] = [];
   const updatedPackages: string[] = [];
@@ -407,7 +426,10 @@ async function _updateSelectedPackages(folderVenv: string, selectedPackages: tre
   }
   if (packagesToUpdate.length > 0) {
     logUtils.sendOutputLogToChannel(`About to update following Pypi packages: ${packagesToUpdate.join(', ')}`, logUtils.logType.INFO)
-    await cliCommands.safeRunCliCmd(sourceCliCommand, true)
+    const isVenv = isVirtualEnvironment(folderVenv)
+    if (isVenv) {
+      await _runSourceForVenv(folderVenv);
+    }
     for (var packageToUpdate of packagesToUpdate) {
       let pipUpgradeCmd = cliCommands.getPipUpgradeCmd(packageToUpdate)
       await cliCommands.safeRunCliCmd(pipUpgradeCmd, true)
