@@ -1,5 +1,6 @@
 import * as cp from 'child_process';
 import * as logUtils from './logUtils'
+const isWin = process.platform === "win32";
 
 
 export function getImportCmd(folderVenv: string, packageName: string): string {
@@ -26,7 +27,7 @@ export function getPipInstallCmd(packageToInstall: string, pypiPackageVersion?: 
 }
 
 export function getPipUnInstallCmd(packageToUnInstall: string): string {
-    const cmdCommand = `pip3 uninstall ${packageToUnInstall}`
+    const cmdCommand = `pip3 uninstall -y ${packageToUnInstall}`
     return cmdCommand
 }
 
@@ -35,11 +36,15 @@ export function getPipUpgradeCmd(packageToUpgrade: string): string {
     return cmdCommand
 }
 
-export async function safeRunCliCmd(cliCmd: string, logStdOut: boolean = false, returnStdOut: boolean = false): Promise<string> {
+export async function safeRunCliCmd(cliCommands: string[], logStdOut: boolean = false, returnStdOut: boolean = false): Promise<string> {
+    let commandsToRunSyntax = cliCommands.join('; ')
+    if (isWin) {
+        commandsToRunSyntax = cliCommands.join('&& ')
+    }
     try {
-        let stdout = cp.execSync(cliCmd, { encoding: 'utf-8' });
+        let stdout = cp.execSync(commandsToRunSyntax, { encoding: 'utf-8' });
         if (logStdOut) {
-            logUtils.sendOutputLogToChannel(`CLI command ${cliCmd} output is: ${stdout}`, logUtils.logType.INFO)
+            logUtils.sendOutputLogToChannel(`CLI command ${cliCommands.join(', ')} output is: ${stdout}`, logUtils.logType.INFO)
         }
         if (returnStdOut) {
             return stdout
@@ -47,7 +52,7 @@ export async function safeRunCliCmd(cliCmd: string, logStdOut: boolean = false, 
     }
     catch (error) {
         if (logStdOut) {
-            logUtils.sendOutputLogToChannel(`Error for CLI command ${cliCmd}: ${error}`, logUtils.logType.ERROR)
+            logUtils.sendOutputLogToChannel(`Error for CLI command ${cliCommands.join(', ')}: ${error}`, logUtils.logType.ERROR)
         }
         if (returnStdOut) {
             return error
