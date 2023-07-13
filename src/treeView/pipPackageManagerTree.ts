@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as treeItems from './TreeItems'
 import * as treeViewUtils from '../utils/treeViewUtils'
 import * as validator from '../utils/validator'
+import * as logUtils from '../utils/logUtils'
 
 export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeItems.BaseFoldersView> {
 
@@ -23,6 +24,7 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
       true,
       'Python interpreter cannot be empty'
     )
+    logUtils.sendOutputLogToChannel(`Folder interpreter from user input is: ${folderInterpreterFromUser}`, logUtils.logType.INFO)
     const isValid = validator.isValidInterpreterPath(folderInterpreterFromUser)
     if (isValid) {
       folder.folderVenv = folderInterpreterFromUser
@@ -57,7 +59,7 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
     try {
       treeViewUtils.enrichInfoFromPythonExtension(folderViews, pythonExtensionConfig);
     } catch (error) {
-      console.log(`Failed to get workspace info from Python extension, due to error: ${error}.`)
+      logUtils.sendOutputLogToChannel(`Failed to get workspace info from Python extension, due to error: ${error}.`, logUtils.logType.ERROR)
     }
     return folderViews
   }

@@ -5,10 +5,12 @@ import * as cp from 'child_process';
 import axios from 'axios';
 import * as treeItems from '../treeView/TreeItems'
 import * as cliCommands from './cliCommands'
+import * as logUtils from './logUtils'
 const extensionConfig = vscode.workspace.getConfiguration('pipPackageManager')
 const followSymbolicLinks: boolean = extensionConfig.get('followSymbolicLinks')
 
 export function updateConfiguration(configSetting: string, configValue: any) {
+  logUtils.sendOutputLogToChannel(`About to update config setting: ${configSetting}, with value: ${configValue}`, logUtils.logType.INFO)
   extensionConfig.update(configSetting, configValue, vscode.ConfigurationTarget.Workspace)
 }
 
@@ -32,6 +34,7 @@ export function enrichInfoFromPythonExtension(folderViews: treeItems.FoldersView
   })
   folderViews.forEach((folderView) => {
     if (!folderView.folderVenv) {
+      logUtils.sendOutputLogToChannel(`Unable to find Python interpreter for workspace: ${folderView.folderName}`, logUtils.logType.WARNING)
       vscode.window.showWarningMessage(`Unable to find Python interpreter for workspace: ${folderView.folderName}, please attach a Python interpreter manually`)
     }
   })
@@ -51,7 +54,7 @@ export function getWorkspaceFoldersOnly(folderViews: treeItems.FoldersView[]) {
       folderViews.push(folderView);
     }
     else {
-      console.log(`Folder ${folder.uri.fsPath} does not include python files`)
+      logUtils.sendOutputLogToChannel(`Folder ${folder.uri.fsPath} does not include python files`, logUtils.logType.WARNING)
     }
   });
   return folderViews;
@@ -119,17 +122,19 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
   const missingPythonPackages: treeItems.pythonPackage[] = []
   const privatePythonPackages: treeItems.pythonPackage[] = []
 
-  console.log(`Starting get package collections`)
+  logUtils.sendOutputLogToChannel(`Starting get package collections for folder: ${folderVenv}`, logUtils.logType.INFO)
   for (const packageName of ProjectDependencies) {
-    console.log(`Starting check for package: ${packageName}`);
+    logUtils.sendOutputLogToChannel(`Starting check for package: ${packageName}`, logUtils.logType.INFO)
     const cmd = cliCommands.getImportCmd(folderVenv, packageName);
     try {
       cp.execSync(cmd, { encoding: 'utf-8' });
     }
     catch (error) {
       if (error.message.includes('ModuleNotFoundError: No module named')) {
+        logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} cannot be imported: "ModuleNotFoundError"`, logUtils.logType.INFO)
         const packageIsPrivateModule = projectInitFolders.includes(packageName);
         if (packageIsPrivateModule) {
+          logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} seems to be a private module`, logUtils.logType.INFO)
           const privatePythonPackage = new treeItems.pythonPackage(
             packageName,
             null,
@@ -139,6 +144,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
         } else {
           const validUrl = await checkUrlExists(`https://pypi.org/project/${packageName}/`);
           if (validUrl) {
+            logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} found in Pypi website considered as missing`, logUtils.logType.INFO)
             const missingPythonPackage = new treeItems.pythonPackage(
               packageName,
               null,
@@ -147,6 +153,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
             missingPythonPackage.contextValue = 'missingPythonPackage'
             missingPythonPackages.push(missingPythonPackage);
           } else {
+            logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} cannot be found in Pypi website`, logUtils.logType.INFO)
             const privatePythonPackage = new treeItems.pythonPackage(
               packageName,
               null,
@@ -158,6 +165,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
       }
     }
     const packageNumber = await getPythonPackageNumber(packageName);
+    logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
     const installedPythonPackage = new treeItems.pythonPackage(
       packageName,
       packageNumber,
@@ -203,11 +211,9 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
 
 export async function getPythonPackageNumber(pythonPackageName: string): Promise<string | undefined> {
   const cmd = cliCommands.getPipShowCmd(pythonPackageName);
-  console.log(`About to run show pip for package: ${pythonPackageName}`)
   try {
     let stdout = cp.execSync(cmd, { encoding: 'utf-8' });
     let packageVersion = findVersion(stdout)
-    console.log(`packageVersion is: ${packageVersion}`)
     return packageVersion
   }
   catch (error) {
@@ -246,7 +252,10 @@ export function findVersion(multiLineString: string): string | null {
 
 export async function getUserInput(prompt?: string, placeHolder?: string, validateInput?: boolean, inputErrorMessage?: string) {
   if (validateInput && !inputErrorMessage) {
-    throw new Error('Asked to validate input without inputErrorMessage');
+    const errorLog = 'Internal function error: Asked to validate input without inputErrorMessage'
+    logUtils.sendOutputLogToChannel(errorLog, logUtils.logType.ERROR)
+    vscode.window.showErrorMessage(errorLog)
+    throw new Error(errorLog);
   }
 
   const inputBoxOptions: vscode.InputBoxOptions = {
@@ -276,10 +285,12 @@ function getActivePythonPath(pythonInterpreterPath: string): string {
   const wordsToReplace = ["python", "python3"];
   const pattern = new RegExp(wordsToReplace.join("|"), "g");
   const replacedPath = pythonInterpreterPath.replace(pattern, "activate");
+  logUtils.sendOutputLogToChannel(`Path to run activate for env is: ${replacedPath}`, logUtils.logType.INFO)
   return replacedPath
 }
 
 export async function installMissingPackages(pythonPackageCollection: treeItems.pythonPackageCollection) {
+  logUtils.sendOutputLogToChannel(`Start running Installation for missing packages`, logUtils.logType.INFO)
   await _installSelectedPackages(pythonPackageCollection.folderVenv, pythonPackageCollection.pythonPackages)
 }
 
@@ -302,9 +313,11 @@ export async function installPypiPackage(folderView: treeItems.FoldersView) {
     true,
     'Pypi package cannot be empty'
   )
+  logUtils.sendOutputLogToChannel(`User input for package name is: ${pypiPackageName}`, logUtils.logType.INFO)
   vscode.window.showInformationMessage(`Checking ${pypiPackageName} is a valid Pypi package`)
   const validUrl = await checkUrlExists(`https://pypi.org/project/${pypiPackageName}/`);
   if (!validUrl) {
+    logUtils.sendOutputLogToChannel(`${pypiPackageName} is not a valid package name, as we cannot find it in Pypi site`, logUtils.logType.ERROR)
     vscode.window.showErrorMessage(`${pypiPackageName} is not a valid package name`)
     return
   }
@@ -314,6 +327,7 @@ export async function installPypiPackage(folderView: treeItems.FoldersView) {
     false,
   )
   if (!pypiPackageVersion) {
+    logUtils.sendOutputLogToChannel(`No version was provided for ${pypiPackageName} will install the latest version`, logUtils.logType.WARNING)
     vscode.window.showWarningMessage(`No version was provided for ${pypiPackageName} will install the latest version`)
   }
   _installPypiPackageTerminal(folderView.folderVenv, pypiPackageName, pypiPackageVersion)
@@ -325,6 +339,9 @@ async function _installPypiPackageTerminal(folderVenv: string, pypiPackageName: 
   let installCliCommand = cliCommands.getPipInstallCmd(pypiPackageName, pypiPackageVersion)
   await cliCommands.safeRunCliCmd(sourceCliCommand, true)
   await cliCommands.safeRunCliCmd(installCliCommand, true)
+  const finishedLog = `Finished installing : ${pypiPackageName}`
+  logUtils.sendOutputLogToChannel(finishedLog, logUtils.logType.INFO)
+  vscode.window.showInformationMessage(finishedLog)
 }
 
 async function _getInstalledPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]): Promise<string[]> {
@@ -348,18 +365,22 @@ async function _unInstallSelectedPackages(folderVenv: string, selectedPackages: 
   for (var pipPackage of selectedPackages) {
     let unInstallPypiPackageCliCmd = cliCommands.getPipUnInstallCmd(pipPackage.pipPackageName)
     await cliCommands.safeRunCliCmd(unInstallPypiPackageCliCmd, true)
+    logUtils.sendOutputLogToChannel(`Finished uninstalling: ${pipPackage.pipPackageName}`, logUtils.logType.INFO)
   }
+  vscode.window.showInformationMessage('Finished uninstalling operations')
 }
 
 async function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
   const activePythonPath = getActivePythonPath(folderVenv)
   const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath)
   const packagesToInstall = await _getInstalledPackages(folderVenv, selectedPackages);
+  logUtils.sendOutputLogToChannel(`Pypi packages to install are: ${packagesToInstall.join(', ')}`, logUtils.logType.INFO)
   if (packagesToInstall.length > 0) {
     await cliCommands.safeRunCliCmd(sourceCliCommand, true)
     for (var packageToInstall of packagesToInstall) {
       let InstallPypiPackageCliCmd = cliCommands.getPipInstallCmd(packageToInstall)
       await cliCommands.safeRunCliCmd(InstallPypiPackageCliCmd, true)
+      logUtils.sendOutputLogToChannel(`Finished installing package: ${packageToInstall}`, logUtils.logType.INFO)
     }
   }
 }
@@ -385,15 +406,19 @@ async function _updateSelectedPackages(folderVenv: string, selectedPackages: tre
     }
   }
   if (packagesToUpdate.length > 0) {
+    logUtils.sendOutputLogToChannel(`About to update following Pypi packages: ${packagesToUpdate.join(', ')}`, logUtils.logType.INFO)
     await cliCommands.safeRunCliCmd(sourceCliCommand, true)
-    for (var packageToUpgrade of packagesToUpdate) {
-      let pipUpgradeCmd = cliCommands.getPipUpgradeCmd(packageToUpgrade)
+    for (var packageToUpdate of packagesToUpdate) {
+      let pipUpgradeCmd = cliCommands.getPipUpgradeCmd(packageToUpdate)
       await cliCommands.safeRunCliCmd(pipUpgradeCmd, true)
-      updatedPackages.push(packageToUpgrade)
+      updatedPackages.push(packageToUpdate)
+      logUtils.sendOutputLogToChannel(`Finished running update operation for: ${packageToUpdate}`, logUtils.logType.INFO)
     }
   }
+  logUtils.sendOutputLogToChannel(`Successfully updated python packages: ${updatedPackages.join(', ')}`, logUtils.logType.INFO)
   vscode.window.showInformationMessage(`Successfully updated python packages: ${updatedPackages.join(', ')}`)
   if (packagesCannotUpdate.length > 0) {
-    vscode.window.showWarningMessage(`Unable to updated python packages: ${packagesCannotUpdate.join(', ')}`)
+    logUtils.sendOutputLogToChannel(`Successfully updated python packages: ${updatedPackages.join(', ')}, packages cannot be imported`, logUtils.logType.WARNING)
+    vscode.window.showWarningMessage(`Unable to updated python packages: ${packagesCannotUpdate.join(', ')}, packages cannot be imported`)
   }
 }
