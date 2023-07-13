@@ -1,4 +1,6 @@
 import * as cp from 'child_process';
+import * as logUtils from './logUtils'
+
 
 export function getImportCmd(folderVenv: string, packageName: string): string {
     const cmdCommand = `${folderVenv} -c "import ${packageName}"`
@@ -37,7 +39,7 @@ export async function safeRunCliCmd(cliCmd: string, logStdOut: boolean = false, 
     try {
         let stdout = cp.execSync(cliCmd, { encoding: 'utf-8' });
         if (logStdOut) {
-            console.log(`CLI command ${cliCmd} output is: ${stdout}`)
+            logUtils.sendOutputLogToChannel(`CLI command ${cliCmd} output is: ${stdout}`, logUtils.logType.INFO)
         }
         if (returnStdOut) {
             return stdout
@@ -45,7 +47,7 @@ export async function safeRunCliCmd(cliCmd: string, logStdOut: boolean = false, 
     }
     catch (error) {
         if (logStdOut) {
-            console.log(`Error for CLI command ${cliCmd}: ${error}`)
+            logUtils.sendOutputLogToChannel(`Error for CLI command ${cliCmd}: ${error}`, logUtils.logType.ERROR)
         }
         if (returnStdOut) {
             return error
