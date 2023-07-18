@@ -78,6 +78,7 @@ export async function getPythonPackageCollectionsForFolder(folderView: treeItems
     return
   }
   let ProjectDependencies = await getProjectDependencies(folderView.folderFsPath);
+  logUtils.sendOutputLogToChannel(`All Project dependencies for: ${folderView.folderName} are: ${ProjectDependencies.join(', ')}`, logUtils.logType.INFO)
   let projectInitFolders = await getProjectInitFolders(folderView.folderFsPath);
   let PythonPackageCollections = await getPythonPackageCollections(ProjectDependencies, folderView.folderVenv, projectInitFolders);
   return PythonPackageCollections;
