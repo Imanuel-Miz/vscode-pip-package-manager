@@ -343,18 +343,12 @@ export async function installPypiPackage(folderView: treeItems.FoldersView) {
     logUtils.sendOutputLogToChannel(`No version was provided for ${pypiPackageName} will install the latest version`, logUtils.logType.WARNING)
     vscode.window.showWarningMessage(`No version was provided for ${pypiPackageName} will install the latest version`)
   }
-  _installPypiPackageTerminal(folderView.folderVenv, folderView.isVenv, pypiPackageName, pypiPackageVersion)
+  _installPypiPackageTerminal(folderView.folderVenv, pypiPackageName, pypiPackageVersion)
 }
 
-async function _installPypiPackageTerminal(folderVenv: string, isVirtrualEnv: boolean, pypiPackageName: string, pypiPackageVersion?: string) {
-  let commandsToRun: string[] = []
-  if (isVirtrualEnv) {
-    const sourceCliCommand = _getSourceCommandForVenv(folderVenv);
-    commandsToRun.push(sourceCliCommand)
-  }
+async function _installPypiPackageTerminal(folderVenv: string, pypiPackageName: string, pypiPackageVersion?: string) {
   let installCliCommand = cliCommands.getPipInstallCmd(pypiPackageName, pypiPackageVersion)
-  commandsToRun.push(installCliCommand)
-  await cliCommands.safeRunCliCmd(commandsToRun, true)
+  await cliCommands.safeRunCliCmd([installCliCommand], folderVenv, true)
   const finishedLog = `Finished installing : ${pypiPackageName}`
   logUtils.sendOutputLogToChannel(finishedLog, logUtils.logType.INFO)
   vscode.window.showInformationMessage(finishedLog)
@@ -383,39 +377,38 @@ async function _getPackagesToInstall(folderVenv: string, selectedPackages: treeI
 
 async function _unInstallSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
   let unInstalledPackages: string[] = []
-  let commandsToRun: string[] = []
-  const isVenv = isVirtualEnvironment(folderVenv)
-  if (isVenv) {
-    const sourceCliCommand = _getSourceCommandForVenv(folderVenv);
-    commandsToRun.push(sourceCliCommand)
-  }
   for (var pipPackage of selectedPackages) {
     let unInstallPypiPackageCliCmd = cliCommands.getPipUnInstallCmd(pipPackage.pipPackageName)
-    commandsToRun.push(unInstallPypiPackageCliCmd)
-    unInstalledPackages.push(pipPackage.pipPackageName)
+    let stdout = await cliCommands.safeRunCliCmd([unInstallPypiPackageCliCmd], folderVenv, true, true)
+    if (stdout.toLowerCase().includes('successfully')) {
+      unInstalledPackages.push(pipPackage.pipPackageName)
+      logUtils.sendOutputLogToChannel(`Finished uninstalling: ${pipPackage.pipPackageName}`, logUtils.logType.INFO)
+    }
+    else {
+      logUtils.sendOutputLogToChannel(`There was an error uninstalling: ${pipPackage.pipPackageName}, please review the extension logs for more info`, logUtils.logType.WARNING)
+    }
   }
-  await cliCommands.safeRunCliCmd(commandsToRun, true)
   logUtils.sendOutputLogToChannel(`Finished uninstalling: ${unInstalledPackages.join(', ')}`, logUtils.logType.INFO)
-  vscode.window.showInformationMessage('Finished uninstalling operations')
+  vscode.window.showInformationMessage('Finished uninstall operations')
 }
 
 async function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
-  let commandsToRun: string[] = []
-  const isVenv = isVirtualEnvironment(folderVenv)
-  if (isVenv) {
-    const sourceCliCommand = _getSourceCommandForVenv(folderVenv);
-    commandsToRun.push(sourceCliCommand)
-  }
   const packagesToInstall = await _getPackagesToInstall(folderVenv, selectedPackages);
   logUtils.sendOutputLogToChannel(`Pypi packages to install are: ${packagesToInstall.join(', ')}`, logUtils.logType.INFO)
   if (packagesToInstall.length > 0) {
     for (var packageToInstall of packagesToInstall) {
       let InstallPypiPackageCliCmd = cliCommands.getPipInstallCmd(packageToInstall)
-      commandsToRun.push(InstallPypiPackageCliCmd)
+      let stdout = await cliCommands.safeRunCliCmd([InstallPypiPackageCliCmd], folderVenv, true, true)
+      if (stdout.toLowerCase().includes('successfully')) {
+        logUtils.sendOutputLogToChannel(`Finished installing: ${packageToInstall}`, logUtils.logType.INFO)
+      }
+      else {
+        logUtils.sendOutputLogToChannel(`There was an error installing: ${packageToInstall}, please review the extension logs for more info`, logUtils.logType.WARNING)
+      }
     }
-    await cliCommands.safeRunCliCmd(commandsToRun, true)
   }
   logUtils.sendOutputLogToChannel(`Finished installing packages: ${packagesToInstall.join(', ')}`, logUtils.logType.INFO)
+  vscode.window.showInformationMessage('Finished installation operations')
 }
 
 export async function updatePackage(pythonPackage: treeItems.pythonPackage) {
@@ -438,24 +431,42 @@ async function _updateSelectedPackages(folderVenv: string, selectedPackages: tre
   }
   if (packagesToUpdate.length > 0) {
     logUtils.sendOutputLogToChannel(`About to update following Pypi packages: ${packagesToUpdate.join(', ')}`, logUtils.logType.INFO)
-    let commandsToRun: string[] = []
-    const isVenv = isVirtualEnvironment(folderVenv)
-    if (isVenv) {
-      const sourceCliCommand = _getSourceCommandForVenv(folderVenv);
-      commandsToRun.push(sourceCliCommand)
-    }
     for (var packageToUpdate of packagesToUpdate) {
       let pipUpgradeCmd = cliCommands.getPipUpgradeCmd(packageToUpdate)
-      commandsToRun.push(pipUpgradeCmd)
-      updatedPackages.push(packageToUpdate)
+      let stdout = await cliCommands.safeRunCliCmd([pipUpgradeCmd], folderVenv, true, true)
+      if (stdout.toLowerCase().includes('successfully')) {
+        logUtils.sendOutputLogToChannel(`Finished updating: ${packageToUpdate}`, logUtils.logType.INFO)
+        updatedPackages.push(packageToUpdate)
+      }
+      else {
+        logUtils.sendOutputLogToChannel(`There was an error updating: ${packageToUpdate}, please review the extension logs for more info`, logUtils.logType.WARNING)
+      }
     }
-    await cliCommands.safeRunCliCmd(commandsToRun, true)
     logUtils.sendOutputLogToChannel(`Successfully updated python packages: ${updatedPackages.join(', ')}`, logUtils.logType.INFO)
     vscode.window.showInformationMessage(`Successfully updated python packages: ${updatedPackages.join(', ')}`)
   }
 
   if (packagesCannotUpdate.length > 0) {
-    logUtils.sendOutputLogToChannel(`Successfully updated python packages: ${updatedPackages.join(', ')}, packages cannot be imported`, logUtils.logType.WARNING)
+    logUtils.sendOutputLogToChannel(`Unable to updated python packages: ${updatedPackages.join(', ')}, packages cannot be imported`, logUtils.logType.WARNING)
     vscode.window.showWarningMessage(`Unable to updated python packages: ${packagesCannotUpdate.join(', ')}, packages cannot be imported`)
   }
+}
+
+export async function installRequirementFile(folderView: treeItems.FoldersView) {
+  if (!folderView.folderVenv) {
+    vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
+    return
+  }
+  const requirementFilePath = await getUserInput(
+    'Please provide a full path to the requirement.txt file',
+    undefined, true, 'Path cannot be empty'
+  )
+  if (fs.existsSync(requirementFilePath)!) {
+    logUtils.sendOutputLogToChannel(`Unable to find requirement.txt file on path: ${requirementFilePath}`, logUtils.logType.ERROR)
+    vscode.window.showErrorMessage(`The provided file path cannot be found: ${requirementFilePath}. Please verify file location on the system`)
+  }
+  const pipInstallRequirementFileCmd = cliCommands.getPipInstallRequirementFileCmd(requirementFilePath)
+  await cliCommands.safeRunCliCmd([pipInstallRequirementFileCmd], folderView.folderVenv, true)
+  logUtils.sendOutputLogToChannel(`Finished running installation for requirement file: ${requirementFilePath}, please review extension logs for more info`, logUtils.logType.INFO)
+  vscode.window.showInformationMessage(`Finished running installation for requirement file: ${requirementFilePath}.`)
 }

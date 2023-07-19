@@ -1,5 +1,6 @@
 import * as cp from 'child_process';
 import * as logUtils from './logUtils'
+import { isVirtualEnvironment } from './treeViewUtils';
 const isWin = process.platform === "win32";
 
 
@@ -36,7 +37,16 @@ export function getPipUpgradeCmd(packageToUpgrade: string): string {
     return cmdCommand
 }
 
-export async function safeRunCliCmd(cliCommands: string[], logStdOut: boolean = false, returnStdOut: boolean = false): Promise<string> {
+export function getPipInstallRequirementFileCmd(requirementFilePath: string): string {
+    const cmdCommand = `pip3 install -r ${requirementFilePath}`
+    return cmdCommand
+}
+
+export async function safeRunCliCmd(cliCommands: string[], pythonInterpreterPath: string, logStdOut: boolean = false, returnStdOut: boolean = false): Promise<string> {
+    const sourceCommandForPyInterpreter = _getSourceCommandForPyInterpreter(pythonInterpreterPath)
+    if (sourceCommandForPyInterpreter) {
+        cliCommands.unshift(sourceCommandForPyInterpreter)
+    }
     let commandsToRunSyntax = cliCommands.join('; ')
     if (isWin) {
         commandsToRunSyntax = cliCommands.join('&& ')
@@ -58,4 +68,28 @@ export async function safeRunCliCmd(cliCommands: string[], logStdOut: boolean = 
             return error
         }
     }
+}
+
+function _getSourceCommandForPyInterpreter(pythonInterpreterPath: string): string | null {
+    let sourceCommand: string | null = null
+    const isVenv = isVirtualEnvironment(pythonInterpreterPath)
+    if (isVenv) {
+        logUtils.sendOutputLogToChannel(`${pythonInterpreterPath} is a virtual env`, logUtils.logType.INFO);
+        sourceCommand = _getSourceCommandForVenv(pythonInterpreterPath);
+    }
+    return sourceCommand
+}
+
+function _getSourceCommandForVenv(pythonVenvPath: string): string {
+    const activePythonPath = getActivePythonPath(pythonVenvPath);
+    const sourceCliCommand = getSourceCmd(activePythonPath);
+    return sourceCliCommand
+}
+
+function getActivePythonPath(pythonInterpreterPath: string): string {
+    const wordsToReplace = ["\\bpython\\b", "\\bpython3\\b"];
+    const pattern = new RegExp(wordsToReplace.join("|"), "g");
+    const replacedPath = pythonInterpreterPath.replace(pattern, "activate");
+    logUtils.sendOutputLogToChannel(`Path to run activate for env is: ${replacedPath}`, logUtils.logType.INFO)
+    return replacedPath
 }

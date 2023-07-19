@@ -46,6 +46,11 @@
         "shortTitle": "Set Python Interpreter"
       },
       {
+        "command": "pip-package-manager.installRequirementFile",
+        "title": "Install specific requirement.txt file",
+        "shortTitle": "Install requirement file"
+      },
+      {
         "command": "pip-package-manager.installMissingPackages",
         "title": "Install missing packages"
       },
@@ -86,9 +91,14 @@
           "group": "pip-package-manager@1"
         },
         {
-          "command": "pip-package-manager.installPypiPackage",
+          "command": "pip-package-manager.installRequirementFile",
           "when": "view == pipPackageManager && viewItem == FolderView",
           "group": "pip-package-manager@2"
+        },
+        {
+          "command": "pip-package-manager.installPypiPackage",
+          "when": "view == pipPackageManager && viewItem == FolderView",
+          "group": "pip-package-manager@3"
         },
         {
           "command": "pip-package-manager.installMissingPackages",
