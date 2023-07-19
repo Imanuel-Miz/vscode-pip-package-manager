@@ -23,6 +23,7 @@ function activate(context: any) {
 	vscode.commands.registerCommand('pip-package-manager.unInstallPypiPackage', async (pythonPackage) => await treeViewUtils.unInstallPypiPackage(pythonPackage));
 	// requirements commands
 	vscode.commands.registerCommand('pip-package-manager.installRequirementFile', async (folder) => await treeViewUtils.installRequirementFile(folder));
+	vscode.commands.registerCommand('pip-package-manager.scanInstallRequirementsFile', async (folder) => await treeViewUtils.scanInstallRequirementsFile(folder));
 
 }
 module.exports = {

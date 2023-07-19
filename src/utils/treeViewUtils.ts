@@ -465,8 +465,31 @@ export async function installRequirementFile(folderView: treeItems.FoldersView) 
     logUtils.sendOutputLogToChannel(`Unable to find requirement.txt file on path: ${requirementFilePath}`, logUtils.logType.ERROR)
     vscode.window.showErrorMessage(`The provided file path cannot be found: ${requirementFilePath}. Please verify file location on the system`)
   }
+  await _runInstallRequirementFile(requirementFilePath, folderView.folderVenv)
+}
+
+async function _runInstallRequirementFile(requirementFilePath: string, pythonInterpreterPath: string) {
   const pipInstallRequirementFileCmd = cliCommands.getPipInstallRequirementFileCmd(requirementFilePath)
-  await cliCommands.safeRunCliCmd([pipInstallRequirementFileCmd], folderView.folderVenv, true)
+  await cliCommands.safeRunCliCmd([pipInstallRequirementFileCmd], pythonInterpreterPath, true)
   logUtils.sendOutputLogToChannel(`Finished running installation for requirement file: ${requirementFilePath}, please review extension logs for more info`, logUtils.logType.INFO)
   vscode.window.showInformationMessage(`Finished running installation for requirement file: ${requirementFilePath}.`)
+}
+
+export async function scanInstallRequirementsFile(folderView: treeItems.FoldersView) {
+  if (!folderView.folderVenv) {
+    vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
+    return
+  }
+  const projectRequirementsFiles = glob.sync(`${folderView.folderFsPath}/**/requirements.txt`);
+  if (projectRequirementsFiles.length === 0) {
+    logUtils.sendOutputLogToChannel(`Unable to find requirements.txt files in your project`, logUtils.logType.INFO)
+    vscode.window.showInformationMessage(`Unable to find requirements.txt files in your project. Not running any action`)
+  }
+  else {
+    logUtils.sendOutputLogToChannel(`Found number of requirements.txt files: ${projectRequirementsFiles.length}: ${projectRequirementsFiles.join(', ')}`, logUtils.logType.INFO)
+    for (var requirementFilePath of projectRequirementsFiles) {
+      logUtils.sendOutputLogToChannel(`Running installation for requirements.txt file: ${requirementFilePath}`, logUtils.logType.INFO)
+      await _runInstallRequirementFile(requirementFilePath, folderView.folderVenv)
+    }
+  }
 }

@@ -51,6 +51,11 @@
         "shortTitle": "Install requirement file"
       },
       {
+        "command": "pip-package-manager.scanInstallRequirementsFile",
+        "title": "Scan project for requirement.txt files and install it",
+        "shortTitle": "Install requirements files in your project"
+      },
+      {
         "command": "pip-package-manager.installMissingPackages",
         "title": "Install missing packages"
       },
@@ -94,6 +99,11 @@
           "command": "pip-package-manager.installRequirementFile",
           "when": "view == pipPackageManager && viewItem == FolderView",
           "group": "pip-package-manager@2"
+        },
+        {
+          "command": "pip-package-manager.scanInstallRequirementsFile",
+          "when": "view == pipPackageManager && viewItem == FolderView",
+          "group": "pip-package-manager@3"
         },
         {
           "command": "pip-package-manager.installPypiPackage",
