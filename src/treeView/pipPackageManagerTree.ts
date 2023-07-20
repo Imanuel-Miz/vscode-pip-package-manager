@@ -17,7 +17,7 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
     this._onDidChangeTreeData.fire(folder);
   }
 
-  async setFolderInterpreter(folder: treeItems.FoldersView,): Promise<void> {
+  async setFolderInterpreter(folder: treeItems.FoldersView): Promise<void> {
     const folderInterpreterFromUser = await treeViewUtils.getUserInput(
       'Please enter a valid Python interpreter path',
       'Example: /user/local/bin/python',
@@ -32,6 +32,10 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
       this._onDidChangeTreeData.fire(folder);
       vscode.window.showInformationMessage(`${folder.folderName} was updated successfully with Python Interpreter: ${folderInterpreterFromUser}`)
     }
+  }
+
+  showFolderMetadata(folder: treeItems.FoldersView): void {
+    vscode.window.showInformationMessage(`Folders metadata is: ${JSON.stringify(folder, undefined, 4)}`)
   }
 
   getTreeItem(element: treeItems.BaseFoldersView): vscode.TreeItem {

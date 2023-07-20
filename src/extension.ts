@@ -15,6 +15,7 @@ function activate(context: any) {
 	vscode.commands.registerCommand('pip-package-manager.refreshFolders', () => PipPackageManagerProviderTree.refreshFolders());
 	vscode.commands.registerCommand('pip-package-manager.refreshFolder', (folder) => PipPackageManagerProviderTree.refreshPackages(folder));
 	vscode.commands.registerCommand('pip-package-manager.setFolderInterpreter', async (folder) => await PipPackageManagerProviderTree.setFolderInterpreter(folder));
+	vscode.commands.registerCommand('pip-package-manager.showFolderMetadata', async (folder) => await PipPackageManagerProviderTree.showFolderMetadata(folder));
 	// Installation commands
 	vscode.commands.registerCommand('pip-package-manager.installMissingPackages', async (pythonPackageCollection) => await treeViewUtils.installMissingPackages(pythonPackageCollection));
 	vscode.commands.registerCommand('pip-package-manager.installPackages', async (pythonPackage) => await treeViewUtils.installPackage(pythonPackage));

@@ -36,6 +36,11 @@
         }
       },
       {
+        "command": "pip-package-manager.showFolderMetadata",
+        "title": "Show folder metadata",
+        "shortTitle": "Folder metadata"
+      },
+      {
         "command": "pip-package-manager.refreshFolder",
         "title": "Scan Python dependencies for project folder",
         "shortTitle": "Scan folder"
@@ -86,29 +91,34 @@
       ],
       "view/item/context": [
         {
-          "command": "pip-package-manager.refreshFolder",
+          "command": "pip-package-manager.showFolderMetadata",
           "when": "view == 'pipPackageManager' && viewItem == FolderView",
           "group": "pip-package-manager@0"
         },
         {
-          "command": "pip-package-manager.setFolderInterpreter",
-          "when": "view == pipPackageManager && viewItem == FolderView",
+          "command": "pip-package-manager.refreshFolder",
+          "when": "view == 'pipPackageManager' && viewItem == FolderView",
           "group": "pip-package-manager@1"
         },
         {
-          "command": "pip-package-manager.installRequirementFile",
+          "command": "pip-package-manager.setFolderInterpreter",
           "when": "view == pipPackageManager && viewItem == FolderView",
           "group": "pip-package-manager@2"
         },
         {
-          "command": "pip-package-manager.scanInstallRequirementsFile",
+          "command": "pip-package-manager.installRequirementFile",
           "when": "view == pipPackageManager && viewItem == FolderView",
           "group": "pip-package-manager@3"
         },
         {
+          "command": "pip-package-manager.scanInstallRequirementsFile",
+          "when": "view == pipPackageManager && viewItem == FolderView",
+          "group": "pip-package-manager@4"
+        },
+        {
           "command": "pip-package-manager.installPypiPackage",
           "when": "view == pipPackageManager && viewItem == FolderView",
-          "group": "pip-package-manager@3"
+          "group": "pip-package-manager@5"
         },
         {
           "command": "pip-package-manager.installMissingPackages",
