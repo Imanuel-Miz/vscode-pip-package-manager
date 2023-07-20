@@ -96,13 +96,13 @@
           "group": "pip-package-manager@0"
         },
         {
-          "command": "pip-package-manager.refreshFolder",
-          "when": "view == 'pipPackageManager' && viewItem == FolderView",
+          "command": "pip-package-manager.setFolderInterpreter",
+          "when": "view == pipPackageManager && viewItem == FolderView",
           "group": "pip-package-manager@1"
         },
         {
-          "command": "pip-package-manager.setFolderInterpreter",
-          "when": "view == pipPackageManager && viewItem == FolderView",
+          "command": "pip-package-manager.refreshFolder",
+          "when": "view == 'pipPackageManager' && viewItem == FolderView",
           "group": "pip-package-manager@2"
         },
         {

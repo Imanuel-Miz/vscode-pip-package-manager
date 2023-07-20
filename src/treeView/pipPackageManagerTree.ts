@@ -35,7 +35,12 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
   }
 
   showFolderMetadata(folder: treeItems.FoldersView): void {
-    vscode.window.showInformationMessage(`Folders metadata is: ${JSON.stringify(folder, undefined, 4)}`)
+    const folderMetadata = {
+      'Folder Name': folder.folderName,
+      'Python Interpreter': folder.pythonInterpreterPath,
+      'Interpreter is a virtual env': folder.isVenv
+    }
+    vscode.window.showInformationMessage(`Folders metadata is: ${JSON.stringify(folderMetadata, undefined, 4)}`)
   }
 
   getTreeItem(element: treeItems.BaseFoldersView): vscode.TreeItem {
