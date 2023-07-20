@@ -24,7 +24,7 @@ export class FoldersView extends BaseFoldersView {
 
   constructor(
     public readonly folderName: string,
-    public folderVenv: string | undefined,
+    public pythonInterpreterPath: string | undefined,
     public readonly folderFsPath: string | undefined,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
     public isVenv?: boolean,
@@ -33,7 +33,7 @@ export class FoldersView extends BaseFoldersView {
     super(folderName, collapsibleState)
     this.tooltip = `${this.folderName}`;
     this.description = this.folderName;
-    this.folderVenv = this.folderVenv;
+    this.pythonInterpreterPath = this.pythonInterpreterPath;
     this.folderFsPath = this.folderFsPath;
     this.children = children;
   }
@@ -49,7 +49,7 @@ export class pythonPackage extends BaseFoldersView {
   constructor(
     public readonly pipPackageName: string,
     public readonly pipPackageNumber: string | null,
-    public folderVenv: string | undefined,
+    public pythonInterpreterPath: string | undefined,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None
   ) {
     super(pipPackageName, collapsibleState);
@@ -59,7 +59,7 @@ export class pythonPackage extends BaseFoldersView {
     }
     this.tooltip = `${this.pipPackageName}`;
     this.description = description;
-    this.folderVenv = this.folderVenv;
+    this.pythonInterpreterPath = this.pythonInterpreterPath;
     this.pipPackageNumber = this.pipPackageNumber;
     this.collapsibleState = this.collapsibleState
   }
@@ -75,13 +75,13 @@ export class pythonPackageCollection extends BaseFoldersView {
   constructor(
     public readonly collectionName: pythonPackageCollectionName,
     public readonly pythonPackages: pythonPackage[] | [],
-    public folderVenv: string | undefined,
+    public pythonInterpreterPath: string | undefined,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
   ) {
     super(collectionName, collapsibleState);
     this.tooltip = `${this.collectionName}`;
     this.description = this.collectionName;
-    this.folderVenv = this.folderVenv;
+    this.pythonInterpreterPath = this.pythonInterpreterPath;
     this.pythonPackages = this.pythonPackages;
   }
 

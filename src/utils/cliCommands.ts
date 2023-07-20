@@ -4,8 +4,8 @@ import { isVirtualEnvironment } from './treeViewUtils';
 const isWin = process.platform === "win32";
 
 
-export function getImportCmd(folderVenv: string, packageName: string): string {
-    const cmdCommand = `${folderVenv} -c "import ${packageName}"`
+export function getImportCmd(pythonInterpreterPath: string, packageName: string): string {
+    const cmdCommand = `${pythonInterpreterPath} -c "import ${packageName}"`
     return cmdCommand
 }
 

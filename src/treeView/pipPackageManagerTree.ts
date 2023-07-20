@@ -27,7 +27,7 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
     logUtils.sendOutputLogToChannel(`Folder interpreter from user input is: ${folderInterpreterFromUser}`, logUtils.logType.INFO)
     const isValid = validator.isValidInterpreterPath(folderInterpreterFromUser)
     if (isValid) {
-      folder.folderVenv = folderInterpreterFromUser
+      folder.pythonInterpreterPath = folderInterpreterFromUser
       folder.isVenv = treeViewUtils.isVirtualEnvironment(folderInterpreterFromUser)
       this._onDidChangeTreeData.fire(folder);
       vscode.window.showInformationMessage(`${folder.folderName} was updated successfully with Python Interpreter: ${folderInterpreterFromUser}`)

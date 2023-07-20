@@ -35,9 +35,9 @@ export function enrichInfoFromPythonExtension(folderViews: treeItems.FoldersView
       let env_info = pythonExtensionConfig.exports.environments["known"][key];
       try {
         if (env_info["internal"]["environment"]["workspaceFolder"]["name"] === folderView.folderName) {
-          let folderVenv = env_info["internal"]["path"]
-          folderView.folderVenv = folderVenv
-          folderView.isVenv = isVirtualEnvironment(folderVenv)
+          let pythonInterpreterPath = env_info["internal"]["path"]
+          folderView.pythonInterpreterPath = pythonInterpreterPath
+          folderView.isVenv = isVirtualEnvironment(pythonInterpreterPath)
         }
       } catch (error) {
         continue
@@ -45,7 +45,7 @@ export function enrichInfoFromPythonExtension(folderViews: treeItems.FoldersView
     }
   })
   folderViews.forEach((folderView) => {
-    if (!folderView.folderVenv) {
+    if (!folderView.pythonInterpreterPath) {
       logUtils.sendOutputLogToChannel(`Unable to find Python interpreter for workspace: ${folderView.folderName}`, logUtils.logType.WARNING)
       vscode.window.showWarningMessage(`Unable to find Python interpreter for workspace: ${folderView.folderName}, please attach a Python interpreter manually`)
     }
@@ -73,14 +73,14 @@ export function getWorkspaceFoldersOnly(folderViews: treeItems.FoldersView[]) {
 }
 
 export async function getPythonPackageCollectionsForFolder(folderView: treeItems.FoldersView) {
-  if (!folderView.folderVenv) {
+  if (!folderView.pythonInterpreterPath) {
     vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
     return
   }
   let ProjectDependencies = await getProjectDependencies(folderView.folderFsPath);
   logUtils.sendOutputLogToChannel(`All Project dependencies for: ${folderView.folderName} are: ${ProjectDependencies.join(', ')}`, logUtils.logType.INFO)
   let projectInitFolders = await getProjectInitFolders(folderView.folderFsPath);
-  let PythonPackageCollections = await getPythonPackageCollections(ProjectDependencies, folderView.folderVenv, projectInitFolders);
+  let PythonPackageCollections = await getPythonPackageCollections(ProjectDependencies, folderView.pythonInterpreterPath, projectInitFolders, folderView.folderName);
   return PythonPackageCollections;
 }
 
@@ -129,16 +129,16 @@ export async function scanProjectDependencies(ProjectPythonFiles: string[]): Pro
   return Array.from(importedPackages)
 }
 
-export async function getPythonPackageCollections(ProjectDependencies: string[], folderVenv: string, projectInitFolders: string[]): Promise<treeItems.pythonPackageCollection[]> {
+export async function getPythonPackageCollections(ProjectDependencies: string[], pythonInterpreterPath: string, projectInitFolders: string[], folderName: string): Promise<treeItems.pythonPackageCollection[]> {
   const pythonPackageCollections: treeItems.pythonPackageCollection[] = []
   const installedPythonPackages: treeItems.pythonPackage[] = []
   const missingPythonPackages: treeItems.pythonPackage[] = []
   const privatePythonPackages: treeItems.pythonPackage[] = []
 
-  logUtils.sendOutputLogToChannel(`Starting get package collections for folder: ${folderVenv}`, logUtils.logType.INFO)
+  logUtils.sendOutputLogToChannel(`Starting get package collections for folder: ${folderName}`, logUtils.logType.INFO)
   for (const packageName of ProjectDependencies) {
     logUtils.sendOutputLogToChannel(`Starting check for package: ${packageName}`, logUtils.logType.INFO)
-    const cmd = cliCommands.getImportCmd(folderVenv, packageName);
+    const cmd = cliCommands.getImportCmd(pythonInterpreterPath, packageName);
     try {
       cp.execSync(cmd, { encoding: 'utf-8' });
     }
@@ -151,7 +151,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
           const privatePythonPackage = new treeItems.pythonPackage(
             packageName,
             null,
-            folderVenv
+            pythonInterpreterPath
           );
           privatePythonPackages.push(privatePythonPackage);
         } else {
@@ -161,7 +161,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
             const missingPythonPackage = new treeItems.pythonPackage(
               packageName,
               null,
-              folderVenv,
+              pythonInterpreterPath,
             );
             missingPythonPackage.contextValue = 'missingPythonPackage'
             missingPythonPackages.push(missingPythonPackage);
@@ -170,7 +170,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
             const privatePythonPackage = new treeItems.pythonPackage(
               packageName,
               null,
-              folderVenv
+              pythonInterpreterPath
             );
             privatePythonPackages.push(privatePythonPackage);
           }
@@ -182,7 +182,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     const installedPythonPackage = new treeItems.pythonPackage(
       packageName,
       packageNumber,
-      folderVenv
+      pythonInterpreterPath
     );
     installedPythonPackage.contextValue = 'installedPythonPackage'
     installedPythonPackages.push(installedPythonPackage);
@@ -194,7 +194,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     const installedPythonPackageCollection = new treeItems.pythonPackageCollection(
       treeItems.pythonPackageCollectionName.INSTALLED,
       installedPythonPackages,
-      installedPythonPackages[0].folderVenv
+      installedPythonPackages[0].pythonInterpreterPath
     )
     pythonPackageCollections.push(installedPythonPackageCollection)
   }
@@ -203,7 +203,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     const missingPythonPackageCollection = new treeItems.pythonPackageCollection(
       treeItems.pythonPackageCollectionName.MISSING,
       missingPythonPackages,
-      missingPythonPackages[0].folderVenv
+      missingPythonPackages[0].pythonInterpreterPath
     )
     missingPythonPackageCollection.contextValue = 'missingPythonPackageCollection'
     pythonPackageCollections.push(missingPythonPackageCollection)
@@ -213,7 +213,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     const privatePythonPackageCollection = new treeItems.pythonPackageCollection(
       treeItems.pythonPackageCollectionName.PRIVATE,
       privatePythonPackages,
-      privatePythonPackages[0].folderVenv
+      privatePythonPackages[0].pythonInterpreterPath
     )
     pythonPackageCollections.push(privatePythonPackageCollection)
   }
@@ -304,19 +304,19 @@ function getActivePythonPath(pythonInterpreterPath: string): string {
 
 export async function installMissingPackages(pythonPackageCollection: treeItems.pythonPackageCollection) {
   logUtils.sendOutputLogToChannel(`Start running Installation for missing packages`, logUtils.logType.INFO)
-  await _installSelectedPackages(pythonPackageCollection.folderVenv, pythonPackageCollection.pythonPackages)
+  await _installSelectedPackages(pythonPackageCollection.pythonInterpreterPath, pythonPackageCollection.pythonPackages)
 }
 
 export async function installPackage(pythonPackage: treeItems.pythonPackage) {
-  await _installSelectedPackages(pythonPackage.folderVenv, [pythonPackage])
+  await _installSelectedPackages(pythonPackage.pythonInterpreterPath, [pythonPackage])
 }
 
 export async function unInstallPypiPackage(pythonPackage: treeItems.pythonPackage) {
-  await _unInstallSelectedPackages(pythonPackage.folderVenv, [pythonPackage])
+  await _unInstallSelectedPackages(pythonPackage.pythonInterpreterPath, [pythonPackage])
 }
 
 export async function installPypiPackage(folderView: treeItems.FoldersView) {
-  if (!folderView.folderVenv) {
+  if (!folderView.pythonInterpreterPath) {
     vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
     return
   }
@@ -343,28 +343,28 @@ export async function installPypiPackage(folderView: treeItems.FoldersView) {
     logUtils.sendOutputLogToChannel(`No version was provided for ${pypiPackageName} will install the latest version`, logUtils.logType.WARNING)
     vscode.window.showWarningMessage(`No version was provided for ${pypiPackageName} will install the latest version`)
   }
-  _installPypiPackageTerminal(folderView.folderVenv, pypiPackageName, pypiPackageVersion)
+  _installPypiPackageTerminal(folderView.pythonInterpreterPath, pypiPackageName, pypiPackageVersion)
 }
 
-async function _installPypiPackageTerminal(folderVenv: string, pypiPackageName: string, pypiPackageVersion?: string) {
+async function _installPypiPackageTerminal(pythonInterpreterPath: string, pypiPackageName: string, pypiPackageVersion?: string) {
   let installCliCommand = cliCommands.getPipInstallCmd(pypiPackageName, pypiPackageVersion)
-  await cliCommands.safeRunCliCmd([installCliCommand], folderVenv, true)
+  await cliCommands.safeRunCliCmd([installCliCommand], pythonInterpreterPath, true)
   const finishedLog = `Finished installing : ${pypiPackageName}`
   logUtils.sendOutputLogToChannel(finishedLog, logUtils.logType.INFO)
   vscode.window.showInformationMessage(finishedLog)
 }
 
-function _getSourceCommandForVenv(folderVenv: string): string {
-  logUtils.sendOutputLogToChannel(`${folderVenv} is a virtual env, running source command`, logUtils.logType.INFO);
-  const activePythonPath = getActivePythonPath(folderVenv);
+function _getSourceCommandForVenv(pythonInterpreterPath: string): string {
+  logUtils.sendOutputLogToChannel(`${pythonInterpreterPath} is a virtual env, running source command`, logUtils.logType.INFO);
+  const activePythonPath = getActivePythonPath(pythonInterpreterPath);
   const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath);
   return sourceCliCommand
 }
 
-async function _getPackagesToInstall(folderVenv: string, selectedPackages: treeItems.pythonPackage[]): Promise<string[]> {
+async function _getPackagesToInstall(pythonInterpreterPath: string, selectedPackages: treeItems.pythonPackage[]): Promise<string[]> {
   const packagesToInstall: string[] = [];
   for (var pythonPackage of selectedPackages) {
-    let cmd = cliCommands.getImportCmd(folderVenv, pythonPackage.pipPackageName);
+    let cmd = cliCommands.getImportCmd(pythonInterpreterPath, pythonPackage.pipPackageName);
     try {
       cp.execSync(cmd, { encoding: 'utf-8' });
     }
@@ -375,11 +375,11 @@ async function _getPackagesToInstall(folderVenv: string, selectedPackages: treeI
   return packagesToInstall
 }
 
-async function _unInstallSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
+async function _unInstallSelectedPackages(pythonInterpreterPath: string, selectedPackages: treeItems.pythonPackage[]) {
   let unInstalledPackages: string[] = []
   for (var pipPackage of selectedPackages) {
     let unInstallPypiPackageCliCmd = cliCommands.getPipUnInstallCmd(pipPackage.pipPackageName)
-    let stdout = await cliCommands.safeRunCliCmd([unInstallPypiPackageCliCmd], folderVenv, true, true)
+    let stdout = await cliCommands.safeRunCliCmd([unInstallPypiPackageCliCmd], pythonInterpreterPath, true, true)
     if (stdout.toLowerCase().includes('successfully')) {
       unInstalledPackages.push(pipPackage.pipPackageName)
       logUtils.sendOutputLogToChannel(`Finished uninstalling: ${pipPackage.pipPackageName}`, logUtils.logType.INFO)
@@ -392,13 +392,13 @@ async function _unInstallSelectedPackages(folderVenv: string, selectedPackages: 
   vscode.window.showInformationMessage('Finished uninstall operations')
 }
 
-async function _installSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
-  const packagesToInstall = await _getPackagesToInstall(folderVenv, selectedPackages);
+async function _installSelectedPackages(pythonInterpreterPath: string, selectedPackages: treeItems.pythonPackage[]) {
+  const packagesToInstall = await _getPackagesToInstall(pythonInterpreterPath, selectedPackages);
   logUtils.sendOutputLogToChannel(`Pypi packages to install are: ${packagesToInstall.join(', ')}`, logUtils.logType.INFO)
   if (packagesToInstall.length > 0) {
     for (var packageToInstall of packagesToInstall) {
       let InstallPypiPackageCliCmd = cliCommands.getPipInstallCmd(packageToInstall)
-      let stdout = await cliCommands.safeRunCliCmd([InstallPypiPackageCliCmd], folderVenv, true, true)
+      let stdout = await cliCommands.safeRunCliCmd([InstallPypiPackageCliCmd], pythonInterpreterPath, true, true)
       if (stdout.toLowerCase().includes('successfully')) {
         logUtils.sendOutputLogToChannel(`Finished installing: ${packageToInstall}`, logUtils.logType.INFO)
       }
@@ -412,15 +412,15 @@ async function _installSelectedPackages(folderVenv: string, selectedPackages: tr
 }
 
 export async function updatePackage(pythonPackage: treeItems.pythonPackage) {
-  _updateSelectedPackages(pythonPackage.folderVenv, [pythonPackage])
+  _updateSelectedPackages(pythonPackage.pythonInterpreterPath, [pythonPackage])
 }
 
-async function _updateSelectedPackages(folderVenv: string, selectedPackages: treeItems.pythonPackage[]) {
+async function _updateSelectedPackages(pythonInterpreterPath: string, selectedPackages: treeItems.pythonPackage[]) {
   const packagesCannotUpdate: string[] = [];
   const packagesToUpdate: string[] = [];
   const updatedPackages: string[] = [];
   for (var pythonPackage of selectedPackages) {
-    let cmd = cliCommands.getImportCmd(folderVenv, pythonPackage.pipPackageName);
+    let cmd = cliCommands.getImportCmd(pythonInterpreterPath, pythonPackage.pipPackageName);
     try {
       cp.execSync(cmd, { encoding: 'utf-8' });
       packagesToUpdate.push(pythonPackage.pipPackageName)
@@ -433,7 +433,7 @@ async function _updateSelectedPackages(folderVenv: string, selectedPackages: tre
     logUtils.sendOutputLogToChannel(`About to update following Pypi packages: ${packagesToUpdate.join(', ')}`, logUtils.logType.INFO)
     for (var packageToUpdate of packagesToUpdate) {
       let pipUpgradeCmd = cliCommands.getPipUpgradeCmd(packageToUpdate)
-      let stdout = await cliCommands.safeRunCliCmd([pipUpgradeCmd], folderVenv, true, true)
+      let stdout = await cliCommands.safeRunCliCmd([pipUpgradeCmd], pythonInterpreterPath, true, true)
       if (stdout.toLowerCase().includes('successfully')) {
         logUtils.sendOutputLogToChannel(`Finished updating: ${packageToUpdate}`, logUtils.logType.INFO)
         updatedPackages.push(packageToUpdate)
@@ -453,7 +453,7 @@ async function _updateSelectedPackages(folderVenv: string, selectedPackages: tre
 }
 
 export async function installRequirementFile(folderView: treeItems.FoldersView) {
-  if (!folderView.folderVenv) {
+  if (!folderView.pythonInterpreterPath) {
     vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
     return
   }
@@ -465,7 +465,7 @@ export async function installRequirementFile(folderView: treeItems.FoldersView) 
     logUtils.sendOutputLogToChannel(`Unable to find requirement.txt file on path: ${requirementFilePath}`, logUtils.logType.ERROR)
     vscode.window.showErrorMessage(`The provided file path cannot be found: ${requirementFilePath}. Please verify file location on the system`)
   }
-  await _runInstallRequirementFile(requirementFilePath, folderView.folderVenv)
+  await _runInstallRequirementFile(requirementFilePath, folderView.pythonInterpreterPath)
 }
 
 async function _runInstallRequirementFile(requirementFilePath: string, pythonInterpreterPath: string) {
@@ -476,7 +476,7 @@ async function _runInstallRequirementFile(requirementFilePath: string, pythonInt
 }
 
 export async function scanInstallRequirementsFile(folderView: treeItems.FoldersView) {
-  if (!folderView.folderVenv) {
+  if (!folderView.pythonInterpreterPath) {
     vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
     return
   }
@@ -489,7 +489,7 @@ export async function scanInstallRequirementsFile(folderView: treeItems.FoldersV
     logUtils.sendOutputLogToChannel(`Found number of requirements.txt files: ${projectRequirementsFiles.length}: ${projectRequirementsFiles.join(', ')}`, logUtils.logType.INFO)
     for (var requirementFilePath of projectRequirementsFiles) {
       logUtils.sendOutputLogToChannel(`Running installation for requirements.txt file: ${requirementFilePath}`, logUtils.logType.INFO)
-      await _runInstallRequirementFile(requirementFilePath, folderView.folderVenv)
+      await _runInstallRequirementFile(requirementFilePath, folderView.pythonInterpreterPath)
     }
   }
 }
