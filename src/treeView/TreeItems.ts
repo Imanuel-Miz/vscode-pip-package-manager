@@ -28,7 +28,8 @@ export class FoldersView extends BaseFoldersView {
     public readonly folderFsPath: string | undefined,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
     public isVenv?: boolean,
-    public children?: pythonPackageCollection[] | undefined
+    public children?: pythonPackageCollection[] | undefined,
+    public systemPythonExecutables?: string[]
   ) {
     super(folderName, collapsibleState)
     this.tooltip = `${this.folderName}`;
@@ -36,6 +37,7 @@ export class FoldersView extends BaseFoldersView {
     this.pythonInterpreterPath = this.pythonInterpreterPath;
     this.folderFsPath = this.folderFsPath;
     this.children = children;
+    this.systemPythonExecutables = this.systemPythonExecutables;
   }
 
   iconPath = {

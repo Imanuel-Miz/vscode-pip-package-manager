@@ -4,6 +4,7 @@ import * as treeViewUtils from '../utils/treeViewUtils'
 import * as validator from '../utils/validator'
 import * as logUtils from '../utils/logUtils'
 
+
 export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeItems.BaseFoldersView> {
 
   private _onDidChangeTreeData: vscode.EventEmitter<treeItems.BaseFoldersView | undefined | void> = new vscode.EventEmitter<treeItems.BaseFoldersView | undefined | void>();
@@ -17,20 +18,19 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
     this._onDidChangeTreeData.fire(folder);
   }
 
+
   async setFolderInterpreter(folder: treeItems.FoldersView): Promise<void> {
-    const folderInterpreterFromUser = await treeViewUtils.getUserInput(
-      'Please enter a valid Python interpreter path',
-      'Example: /user/local/bin/python',
-      true,
-      'Python interpreter cannot be empty'
-    )
-    logUtils.sendOutputLogToChannel(`Folder interpreter from user input is: ${folderInterpreterFromUser}`, logUtils.logType.INFO)
-    const isValid = validator.isValidInterpreterPath(folderInterpreterFromUser)
+    let chosenPythonInterpreter = await treeViewUtils.getPythonInterpreterFromUser(folder)
+    if (!chosenPythonInterpreter) {
+      vscode.window.showWarningMessage(`No python interpreter file selected for: ${folder.name}`)
+      return
+    }
+    const isValid = await validator.isValidInterpreterPath(chosenPythonInterpreter)
     if (isValid) {
-      folder.pythonInterpreterPath = folderInterpreterFromUser
-      folder.isVenv = treeViewUtils.isVirtualEnvironment(folderInterpreterFromUser)
+      folder.pythonInterpreterPath = chosenPythonInterpreter
+      folder.isVenv = treeViewUtils.isVirtualEnvironment(chosenPythonInterpreter)
       this._onDidChangeTreeData.fire(folder);
-      vscode.window.showInformationMessage(`${folder.folderName} was updated successfully with Python Interpreter: ${folderInterpreterFromUser}`)
+      vscode.window.showInformationMessage(`${folder.folderName} was updated successfully with Python Interpreter: ${chosenPythonInterpreter}`)
     }
   }
 

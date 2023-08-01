@@ -9,6 +9,12 @@ import * as logUtils from './logUtils'
 const extensionConfig = vscode.workspace.getConfiguration('pipPackageManager')
 const followSymbolicLinks: boolean = extensionConfig.get('followSymbolicLinks')
 
+interface pickListItem {
+  name: string;
+  description: string;
+}
+
+
 export function updateConfiguration(configSetting: string, configValue: any) {
   logUtils.sendOutputLogToChannel(`About to update config setting: ${configSetting}, with value: ${configValue}`, logUtils.logType.INFO)
   extensionConfig.update(configSetting, configValue, vscode.ConfigurationTarget.Workspace)
@@ -30,9 +36,14 @@ export function isVirtualEnvironment(interpreterPath?: string): boolean | null {
 }
 
 export function enrichInfoFromPythonExtension(folderViews: treeItems.FoldersView[], pythonExtensionConfig: vscode.Extension<any>) {
+  const systemPythonExecutables = new Set<string>();
   folderViews.forEach((folderView) => {
     for (let key in pythonExtensionConfig.exports.environments["known"]) {
       let env_info = pythonExtensionConfig.exports.environments["known"][key];
+      let pythonExecutable: string | null = env_info?.internal?.executable?.uri?.path
+      if (pythonExecutable) {
+        systemPythonExecutables.add(pythonExecutable)
+      }
       try {
         if (env_info["internal"]["environment"]["workspaceFolder"]["name"] === folderView.folderName) {
           let pythonInterpreterPath = env_info["internal"]["path"]
@@ -44,7 +55,10 @@ export function enrichInfoFromPythonExtension(folderViews: treeItems.FoldersView
       }
     }
   })
+  const systemPythonExecutablesList = Array.from(systemPythonExecutables)
+  logUtils.sendOutputLogToChannel(`Full system python executables found: ${systemPythonExecutablesList}`, logUtils.logType.INFO)
   folderViews.forEach((folderView) => {
+    folderView.systemPythonExecutables = systemPythonExecutablesList
     if (!folderView.pythonInterpreterPath) {
       logUtils.sendOutputLogToChannel(`Unable to find Python interpreter for workspace: ${folderView.folderName}`, logUtils.logType.WARNING)
       vscode.window.showWarningMessage(`Unable to find Python interpreter for workspace: ${folderView.folderName}, please attach a Python interpreter manually`)
@@ -492,4 +506,54 @@ export async function scanInstallRequirementsFile(folderView: treeItems.FoldersV
       await _runInstallRequirementFile(requirementFilePath, folderView.pythonInterpreterPath)
     }
   }
+}
+
+async function getSystemPythonExecutablesAsVscodePickList(systemPythonExecutables: string[]): Promise<vscode.QuickPickItem[]> {
+  const pickListItems: pickListItem[] = []
+  for (const [index, value] of systemPythonExecutables.entries()) {
+    let singlePickListItem = { 'name': String(index + 1), 'description': value }
+    pickListItems.push(singlePickListItem)
+  }
+  const systemPythonExecutablesAsVscodePickList: vscode.QuickPickItem[] = pickListItems.map((item) => ({
+    label: item.name,
+    description: item.description,
+  }));
+  const chooseFilePick = { label: 'Choose File', description: 'Select a file path from the system' }
+  systemPythonExecutablesAsVscodePickList.unshift(chooseFilePick)
+  return systemPythonExecutablesAsVscodePickList
+}
+
+export async function getPythonInterpreterFromUser(folder: treeItems.FoldersView): Promise<string | null> {
+  let chosenPythonInterpreter: string | null = null
+  const options: vscode.QuickPickItem[] = await getSystemPythonExecutablesAsVscodePickList(folder.systemPythonExecutables)
+  let userQuickPick = await vscode.window.showQuickPick(options, {
+    canPickMany: false,
+    title: 'Choose Python Interpreter',
+    placeHolder: 'Please select python interpreter from the list, or choose a file from the system'
+  })
+  if (userQuickPick) {
+    if (userQuickPick.label === 'Choose File') {
+      // Show the file picker dialog to select a file
+      const fileUri = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        openLabel: 'Select File',
+      });
+
+      if (fileUri && fileUri[0]) {
+        // User selected a file
+        const filePath = fileUri[0].fsPath;
+        logUtils.sendOutputLogToChannel(`Folder interpreter chosen from system: ${filePath}`, logUtils.logType.INFO)
+        chosenPythonInterpreter = filePath
+      } else {
+        // User canceled the file selection
+        logUtils.sendOutputLogToChannel(`Folder interpreter selection canceled for: ${folder.name}`, logUtils.logType.WARNING)
+      }
+    }
+  }
+  else {
+    logUtils.sendOutputLogToChannel(`No python interpreter file selected for: ${folder.name}`, logUtils.logType.WARNING)
+  }
+  return chosenPythonInterpreter
 }
