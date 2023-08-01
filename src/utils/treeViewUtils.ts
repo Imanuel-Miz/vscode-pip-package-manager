@@ -308,14 +308,6 @@ export async function getUserInput(prompt?: string, placeHolder?: string, valida
   return userInput;
 }
 
-function getActivePythonPath(pythonInterpreterPath: string): string {
-  const wordsToReplace = ["\\bpython\\b", "\\bpython3\\b"];
-  const pattern = new RegExp(wordsToReplace.join("|"), "g");
-  const replacedPath = pythonInterpreterPath.replace(pattern, "activate");
-  logUtils.sendOutputLogToChannel(`Path to run activate for env is: ${replacedPath}`, logUtils.logType.INFO)
-  return replacedPath
-}
-
 export async function installMissingPackages(pythonPackageCollection: treeItems.pythonPackageCollection) {
   logUtils.sendOutputLogToChannel(`Start running Installation for missing packages`, logUtils.logType.INFO)
   await _installSelectedPackages(pythonPackageCollection.pythonInterpreterPath, pythonPackageCollection.pythonPackages)
@@ -366,13 +358,6 @@ async function _installPypiPackageTerminal(pythonInterpreterPath: string, pypiPa
   const finishedLog = `Finished installing : ${pypiPackageName}`
   logUtils.sendOutputLogToChannel(finishedLog, logUtils.logType.INFO)
   vscode.window.showInformationMessage(finishedLog)
-}
-
-function _getSourceCommandForVenv(pythonInterpreterPath: string): string {
-  logUtils.sendOutputLogToChannel(`${pythonInterpreterPath} is a virtual env, running source command`, logUtils.logType.INFO);
-  const activePythonPath = getActivePythonPath(pythonInterpreterPath);
-  const sourceCliCommand = cliCommands.getSourceCmd(activePythonPath);
-  return sourceCliCommand
 }
 
 async function _getPackagesToInstall(pythonInterpreterPath: string, selectedPackages: treeItems.pythonPackage[]): Promise<string[]> {
