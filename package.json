@@ -1,5 +1,6 @@
 {
   "name": "pip-package-manager",
+  "publisher": "ima-miz-vscode",
   "displayName": "Pip Package Manager",
   "description": "Manage Python pip packages dependencies",
   "repository": {
