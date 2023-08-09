@@ -192,14 +192,16 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
       }
     }
     const packageNumber = await getPythonPackageNumber(packageName);
-    logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
-    const installedPythonPackage = new treeItems.pythonPackage(
-      packageName,
-      packageNumber,
-      pythonInterpreterPath
-    );
-    installedPythonPackage.contextValue = 'installedPythonPackage'
-    installedPythonPackages.push(installedPythonPackage);
+    if (packageNumber != null) {
+      logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
+      const installedPythonPackage = new treeItems.pythonPackage(
+        packageName,
+        packageNumber,
+        pythonInterpreterPath
+      );
+      installedPythonPackage.contextValue = 'installedPythonPackage'
+      installedPythonPackages.push(installedPythonPackage);
+    }
   }
 
 
@@ -222,6 +224,15 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     missingPythonPackageCollection.contextValue = 'missingPythonPackageCollection'
     pythonPackageCollections.push(missingPythonPackageCollection)
   }
+  else {
+    const missingPythonPackageCollection = new treeItems.pythonPackageCollection(
+      treeItems.pythonPackageCollectionName.MISSING,
+      [],
+      undefined
+    )
+    missingPythonPackageCollection.contextValue = 'missingPythonPackageCollection'
+    pythonPackageCollections.push(missingPythonPackageCollection)
+  }
 
   if (privatePythonPackages.length > 0) {
     const privatePythonPackageCollection = new treeItems.pythonPackageCollection(
@@ -231,12 +242,20 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     )
     pythonPackageCollections.push(privatePythonPackageCollection)
   }
+  else {
+    const privatePythonPackageCollection = new treeItems.pythonPackageCollection(
+      treeItems.pythonPackageCollectionName.PRIVATE,
+      [],
+      undefined
+    )
+    pythonPackageCollections.push(privatePythonPackageCollection)
+  }
 
   return pythonPackageCollections
 }
 
 
-export async function getPythonPackageNumber(pythonPackageName: string): Promise<string | undefined> {
+export async function getPythonPackageNumber(pythonPackageName: string): Promise<string | null> {
   const cmd = cliCommands.getPipShowCmd(pythonPackageName);
   try {
     let stdout = cp.execSync(cmd, { encoding: 'utf-8' });
