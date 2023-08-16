@@ -15,7 +15,13 @@ export function getPipShowCmd(pythonPackageName: string): string {
 }
 
 export function getSourceCmd(activePythonPath: string): string {
-    const cmdCommand = `source ${activePythonPath}`
+    let cmdCommand: string
+    if (!isWin) {
+        cmdCommand = `source ${activePythonPath}`
+    }
+    else {
+        cmdCommand = `.${activePythonPath}`
+    }
     return cmdCommand
 }
 
@@ -87,9 +93,16 @@ function _getSourceCommandForVenv(pythonVenvPath: string): string {
 }
 
 function getActivePythonPath(pythonInterpreterPath: string): string {
-    const wordsToReplace = ["\\bpython\\b", "\\bpython3\\b"];
-    const pattern = new RegExp(wordsToReplace.join("|"), "g");
-    const replacedPath = pythonInterpreterPath.replace(pattern, "activate");
-    logUtils.sendOutputLogToChannel(`Path to run activate for env is: ${replacedPath}`, logUtils.logType.INFO)
-    return replacedPath
+    if (!isWin) {
+        const wordsToReplace = ["\\bpython\\b", "\\bpython3\\b"];
+        const pattern = new RegExp(wordsToReplace.join("|"), "g");
+        const replacedPath = pythonInterpreterPath.replace(pattern, "activate");
+        logUtils.sendOutputLogToChannel(`Path to run activate for env is: ${replacedPath}`, logUtils.logType.INFO)
+        return replacedPath
+    }
+    else {
+        const replacedPath = pythonInterpreterPath.replace('python.exe', "activate");
+        logUtils.sendOutputLogToChannel(`Path to run activate for env is: ${replacedPath}`, logUtils.logType.INFO)
+        return replacedPath
+    }
 }
