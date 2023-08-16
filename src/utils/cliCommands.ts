@@ -53,10 +53,7 @@ export async function safeRunCliCmd(cliCommands: string[], pythonInterpreterPath
     if (sourceCommandForPyInterpreter) {
         cliCommands.unshift(sourceCommandForPyInterpreter)
     }
-    let commandsToRunSyntax = cliCommands.join('; ')
-    if (isWin) {
-        commandsToRunSyntax = cliCommands.join('&& ')
-    }
+    const commandsToRunSyntax = cliCommands.join('&& ')
     try {
         let stdout = cp.execSync(commandsToRunSyntax, { encoding: 'utf-8' });
         if (logStdOut) {
