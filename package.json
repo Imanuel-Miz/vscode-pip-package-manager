@@ -165,7 +165,8 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
-    "test": "node ./test/runTest.js"
+    "test": "node ./test/runTest.js",
+    "vscode:prepublish": "tsc"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^24.0.0",
