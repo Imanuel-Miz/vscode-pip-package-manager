@@ -35,4 +35,4 @@ This extension contributes the following settings:
 
 ## Contributing
 
-Contributions are welcome! If you find any issues or have suggestions for improvements, please submit them in the issue tracker.
+Contributions are welcome! If you find any issues or have suggestions for improvements, please submit them in the repository page.

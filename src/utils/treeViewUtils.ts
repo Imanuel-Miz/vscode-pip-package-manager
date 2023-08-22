@@ -28,7 +28,7 @@ function checkFolderForPyFiles(folderPath: string): boolean {
 
 export function isVirtualEnvironment(interpreterPath?: string): boolean | null {
   if (interpreterPath) {
-    const virtualEnvFolder = path.dirname(interpreterPath);
+    const virtualEnvFolder = path.dirname(path.dirname(interpreterPath));
     const pyvenvCfgPath = `${virtualEnvFolder}/pyvenv.cfg`;
     const isVirtualEnv = fs.existsSync(pyvenvCfgPath);
     return isVirtualEnv;
@@ -99,21 +99,15 @@ export async function getPythonPackageCollectionsForFolder(folderView: treeItems
   return PythonPackageCollections;
 }
 
-function extractParentFolder(path: string): string {
-  const folders = path.split("/");
-  const lastFolder = folders[folders.length - 2];
-  return lastFolder;
-}
-
 async function getProjectInitFolders(workspaceFolder: string): Promise<string[]> {
   const initPyFolders = new Set<string>();
 
   // Read the contents of the directory
-  const pythonInitFolders = glob.sync(`${workspaceFolder}/**/__init__.py`, { follow: followSymbolicLinks });
+  const pythonInitPaths = glob.sync(`${workspaceFolder}/**/__init__.py`, { follow: followSymbolicLinks });
 
   // Check each file in the directory
-  pythonInitFolders.forEach(async (folder) => {
-    let initPyFolder = extractParentFolder(folder)
+  pythonInitPaths.forEach(async (pythonInitPath) => {
+    let initPyFolder = path.dirname(path.dirname(pythonInitPath))
     initPyFolders.add(initPyFolder);
   })
 
@@ -375,7 +369,7 @@ export async function installPypiPackage(folderView: treeItems.FoldersView) {
 async function _installPypiPackageTerminal(pythonInterpreterPath: string, pypiPackageName: string, pypiPackageVersion?: string) {
   let installCliCommand = cliCommands.getPipInstallCmd(pypiPackageName, pypiPackageVersion)
   await cliCommands.safeRunCliCmd([installCliCommand], pythonInterpreterPath, true)
-  const finishedLog = `Finished installing : ${pypiPackageName}`
+  const finishedLog = `Finished installing: ${pypiPackageName}`
   logUtils.sendOutputLogToChannel(finishedLog, logUtils.logType.INFO)
   vscode.window.showInformationMessage(finishedLog)
 }
