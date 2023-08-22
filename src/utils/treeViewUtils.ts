@@ -3,9 +3,10 @@ import * as fs from 'fs-extra';
 import * as glob from 'glob';
 import * as cp from 'child_process';
 import axios from 'axios';
-import * as treeItems from '../treeView/TreeItems'
-import * as cliCommands from './cliCommands'
-import * as logUtils from './logUtils'
+import * as treeItems from '../treeView/TreeItems';
+import * as cliCommands from './cliCommands';
+import * as logUtils from './logUtils';
+import path from 'path';
 const extensionConfig = vscode.workspace.getConfiguration('pipPackageManager')
 const followSymbolicLinks: boolean = extensionConfig.get('followSymbolicLinks')
 
@@ -27,7 +28,7 @@ function checkFolderForPyFiles(folderPath: string): boolean {
 
 export function isVirtualEnvironment(interpreterPath?: string): boolean | null {
   if (interpreterPath) {
-    const virtualEnvFolder = interpreterPath.split('/bin')[0];
+    const virtualEnvFolder = path.dirname(interpreterPath);
     const pyvenvCfgPath = `${virtualEnvFolder}/pyvenv.cfg`;
     const isVirtualEnv = fs.existsSync(pyvenvCfgPath);
     return isVirtualEnv;
