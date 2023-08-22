@@ -555,9 +555,13 @@ export async function getPythonInterpreterFromUser(folder: treeItems.FoldersView
         logUtils.sendOutputLogToChannel(`Folder interpreter selection canceled for: ${folder.name}`, logUtils.logType.WARNING)
       }
     }
+    else {
+      logUtils.sendOutputLogToChannel(`user quick pick chosen item for python path is: ${JSON.stringify(userQuickPick, undefined, 4)}`, logUtils.logType.INFO)
+      chosenPythonInterpreter = userQuickPick.description
+    }
   }
-  else {
-    logUtils.sendOutputLogToChannel(`No python interpreter file selected for: ${folder.name}`, logUtils.logType.WARNING)
+  if (!chosenPythonInterpreter) {
+    logUtils.sendOutputLogToChannel(`No python interpreter was chosen for: ${folder.name}`, logUtils.logType.WARNING)
   }
   return chosenPythonInterpreter
 }
