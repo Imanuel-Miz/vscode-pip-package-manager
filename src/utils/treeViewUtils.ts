@@ -107,7 +107,7 @@ async function getProjectInitFolders(workspaceFolder: string): Promise<string[]>
 
   // Check each file in the directory
   pythonInitPaths.forEach(async (pythonInitPath) => {
-    let initPyFolder = path.dirname(path.dirname(pythonInitPath))
+    let initPyFolder = path.basename(path.dirname(path.dirname(pythonInitPath)))
     initPyFolders.add(initPyFolder);
   })
 
