@@ -20,7 +20,7 @@ export function getSourceCmd(activePythonPath: string): string {
         cmdCommand = `source ${activePythonPath}`
     }
     else {
-        cmdCommand = `.${activePythonPath}`
+        cmdCommand = `${activePythonPath}`
     }
     return cmdCommand
 }

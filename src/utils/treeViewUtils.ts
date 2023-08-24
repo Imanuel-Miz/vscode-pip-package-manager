@@ -22,6 +22,10 @@ export function updateConfiguration(configSetting: string, configValue: any) {
 }
 
 function checkFolderForPyFiles(folderPath: string): boolean {
+  const files = fs.readdirSync(folderPath);
+  if (files.some(file => file.endsWith('.py'))) {
+    return true
+  }
   const pythonFiles = glob.sync(`${folderPath}/**/*.py`);
   return pythonFiles.length > 0;
 }
@@ -115,8 +119,19 @@ async function getProjectInitFolders(workspaceFolder: string): Promise<string[]>
 }
 
 export async function getProjectPythonFiles(workspaceFolder: string): Promise<string[]> {
-  const pythonFiles = glob.sync(`${workspaceFolder}/**/*.py`, { follow: followSymbolicLinks });
-  return pythonFiles
+  const pythonFiles = new Set<string>();
+  const files = fs.readdirSync(workspaceFolder);
+  for (var file of files) {
+    if (file.endsWith('.py')) {
+      let rootPythonFilePath = path.join(workspaceFolder, file)
+      pythonFiles.add(rootPythonFilePath);
+    }
+  }
+  const pythonFilesSubDirectories = glob.sync(`${workspaceFolder}/**/*.py`, { follow: followSymbolicLinks });
+  for (var file of pythonFilesSubDirectories) {
+    pythonFiles.add(file);
+  }
+  return Array.from(pythonFiles)
 }
 
 export async function getProjectDependencies(workspaceFolder: string): Promise<string[]> {
@@ -149,7 +164,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     logUtils.sendOutputLogToChannel(`Starting check for package: ${packageName}`, logUtils.logType.INFO)
     const cmd = cliCommands.getImportCmd(pythonInterpreterPath, packageName);
     try {
-      cp.execSync(cmd, { encoding: 'utf-8' });
+      cliCommands.safeRunCliCmd([cmd], pythonInterpreterPath)
     }
     catch (error) {
       if (error.message.includes('ModuleNotFoundError: No module named')) {
