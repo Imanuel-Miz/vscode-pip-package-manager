@@ -11,3 +11,4 @@ README.md
 **/*.ts
 **/tsconfig.json
 src/**
+out/
