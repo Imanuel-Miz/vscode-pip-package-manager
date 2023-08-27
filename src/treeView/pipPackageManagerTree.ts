@@ -7,6 +7,14 @@ import * as logUtils from '../utils/logUtils'
 
 export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeItems.BaseFoldersView> {
 
+  private data: treeItems.BaseFoldersView;
+  private context: vscode.ExtensionContext;
+
+  constructor(data: treeItems.BaseFoldersView, context: vscode.ExtensionContext) {
+    this.data = data;
+    this.context = context;
+  }
+
   private _onDidChangeTreeData: vscode.EventEmitter<treeItems.BaseFoldersView | undefined | void> = new vscode.EventEmitter<treeItems.BaseFoldersView | undefined | void>();
   readonly onDidChangeTreeData: vscode.Event<treeItems.BaseFoldersView | undefined | void> = this._onDidChangeTreeData.event;
 
@@ -60,6 +68,7 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
     else {
       return Promise.resolve(this.workspaceFoldersView());
     }
+    this.updateAndSaveData()
   }
 
   private workspaceFoldersView(): treeItems.FoldersView[] {
@@ -72,5 +81,14 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
       logUtils.sendOutputLogToChannel(`Failed to get workspace info from Python extension, due to error: ${error}.`, logUtils.logType.ERROR)
     }
     return folderViews
+  }
+
+  toJSON(): treeItems.BaseFoldersView {
+    return this.data;
+  }
+
+  updateAndSaveData() {
+    const newDataJson = JSON.stringify(this.toJSON(), undefined, 4);
+    this.context.workspaceState.update('treeViewData', newDataJson);
   }
 }
