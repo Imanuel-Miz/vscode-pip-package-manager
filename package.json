@@ -80,10 +80,6 @@
       {
         "command": "pip-package-manager.unInstallPypiPackage",
         "title": "Uninstall selected pip package"
-      },
-      {
-        "command": "pip-package-manager.deactivate",
-        "title": "Deactivate Extension"
       }
     ],
     "menus": {

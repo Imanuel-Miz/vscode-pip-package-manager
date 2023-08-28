@@ -1,15 +1,19 @@
 import vscode from 'vscode';
 import { PipPackageManagerProvider } from './treeView/pipPackageManagerTree';
 import * as treeViewUtils from './utils/treeViewUtils';
+let PipPackageManagerProviderTree: PipPackageManagerProvider | undefined = undefined;
 
+
+function registerTreeView(context: vscode.ExtensionContext) {
+	if (!PipPackageManagerProviderTree) {
+		const savedDataJson = context.workspaceState.get<string>('treeViewData');
+		const savedData = savedDataJson ? JSON.parse(savedDataJson) : { name: '', collapsibleState: vscode.TreeItemCollapsibleState.None };
+		PipPackageManagerProviderTree = new PipPackageManagerProvider(savedData, context);
+		vscode.window.registerTreeDataProvider('pipPackageManager', PipPackageManagerProviderTree);
+	}
+}
 
 function activate(context: vscode.ExtensionContext) {
-
-	// Init tree from saved data
-	const savedDataJson = context.workspaceState.get<string>('treeViewData');
-	const savedData = savedDataJson ? JSON.parse(savedDataJson) : { name: '', collapsibleState: vscode.TreeItemCollapsibleState.None };
-	const PipPackageManagerProviderTree = new PipPackageManagerProvider(savedData, context);
-	vscode.window.registerTreeDataProvider('pipPackageManager', PipPackageManagerProviderTree);
 
 	const commands = [
 		// Folder commands
@@ -30,13 +34,15 @@ function activate(context: vscode.ExtensionContext) {
 	// Register commands
 	commands.forEach(({ command, callback }) => vscode.commands.registerCommand(command, callback));
 
-	// Save tree provider data once closing 
-	context.subscriptions.push(vscode.commands.registerCommand('pip-package-manager.deactivate', () => {
-		PipPackageManagerProviderTree.updateAndSaveData();
-	}));
+}
 
+// Save tree provider data once closing vscode
+function deactivate() {
+	if (PipPackageManagerProviderTree) {
+		PipPackageManagerProviderTree.updateAndSaveData()
+	}
 }
 
 module.exports = {
-	activate
+	registerTreeView, activate, deactivate
 }
