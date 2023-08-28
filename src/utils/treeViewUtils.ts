@@ -164,7 +164,7 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     logUtils.sendOutputLogToChannel(`Starting check for package: ${packageName}`, logUtils.logType.INFO)
     const cmd = cliCommands.getImportCmd(pythonInterpreterPath, packageName);
     try {
-      cliCommands.safeRunCliCmd([cmd], pythonInterpreterPath)
+      cliCommands.runCliCmd([cmd], pythonInterpreterPath)
     }
     catch (error) {
       if (error.message.includes('ModuleNotFoundError: No module named')) {

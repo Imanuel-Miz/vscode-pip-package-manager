@@ -11,24 +11,27 @@ function activate(context: vscode.ExtensionContext) {
 	const PipPackageManagerProviderTree = new PipPackageManagerProvider(savedData, context);
 	vscode.window.registerTreeDataProvider('pipPackageManager', PipPackageManagerProviderTree);
 
-	// Folder commands
-	vscode.commands.registerCommand('pip-package-manager.refreshFolders', () => PipPackageManagerProviderTree.refreshFolders());
-	vscode.commands.registerCommand('pip-package-manager.refreshFolder', (folder) => PipPackageManagerProviderTree.refreshPackages(folder));
-	vscode.commands.registerCommand('pip-package-manager.setFolderInterpreter', async (folder) => await PipPackageManagerProviderTree.setFolderInterpreter(folder));
-	vscode.commands.registerCommand('pip-package-manager.showFolderMetadata', async (folder) => await PipPackageManagerProviderTree.showFolderMetadata(folder));
-	// Installation commands
-	vscode.commands.registerCommand('pip-package-manager.installMissingPackages', async (pythonPackageCollection) => await treeViewUtils.installMissingPackages(pythonPackageCollection));
-	vscode.commands.registerCommand('pip-package-manager.installPackages', async (pythonPackage) => await treeViewUtils.installPackage(pythonPackage));
-	vscode.commands.registerCommand('pip-package-manager.installPypiPackage', async (folder) => await treeViewUtils.installPypiPackage(folder));
-	vscode.commands.registerCommand('pip-package-manager.updatePackage', async (pythonPackage) => await treeViewUtils.updatePackage(pythonPackage));
-	vscode.commands.registerCommand('pip-package-manager.unInstallPypiPackage', async (pythonPackage) => await treeViewUtils.unInstallPypiPackage(pythonPackage));
-	// requirements commands
-	vscode.commands.registerCommand('pip-package-manager.installRequirementFile', async (folder) => await treeViewUtils.installRequirementFile(folder));
-	vscode.commands.registerCommand('pip-package-manager.scanInstallRequirementsFile', async (folder) => await treeViewUtils.scanInstallRequirementsFile(folder));
+	const commands = [
+		// Folder commands
+		{ command: 'pip-package-manager.refreshFolders', callback: () => PipPackageManagerProviderTree.refreshFolders() },
+		{ command: 'pip-package-manager.refreshFolder', callback: (folder) => PipPackageManagerProviderTree.refreshPackages(folder) },
+		{ command: 'pip-package-manager.setFolderInterpreter', callback: async (folder) => await PipPackageManagerProviderTree.setFolderInterpreter(folder) },
+		{ command: 'pip-package-manager.showFolderMetadata', callback: async (folder) => await PipPackageManagerProviderTree.showFolderMetadata(folder) },
+		// Installation commands 
+		{ command: 'pip-package-manager.installMissingPackages', callback: async (pythonPackageCollection) => await treeViewUtils.installMissingPackages(pythonPackageCollection) },
+		{ command: 'pip-package-manager.installPackages', callback: async (pythonPackage) => await treeViewUtils.installPackage(pythonPackage) },
+		{ command: 'pip-package-manager.installPypiPackage', callback: async (folder) => await treeViewUtils.installPypiPackage(folder) },
+		{ command: 'pip-package-manager.updatePackage', callback: async (pythonPackage) => await treeViewUtils.updatePackage(pythonPackage) },
+		{ command: 'pip-package-manager.unInstallPypiPackage', callback: async (pythonPackage) => await treeViewUtils.unInstallPypiPackage(pythonPackage) },
+		// requirements commands
+		{ command: 'pip-package-manager.installRequirementFile', callback: async (folder) => await treeViewUtils.installRequirementFile(folder) },
+		{ command: 'pip-package-manager.scanInstallRequirementsFile', callback: async (folder) => await treeViewUtils.scanInstallRequirementsFile(folder) },
+	];
+	// Register commands
+	commands.forEach(({ command, callback }) => vscode.commands.registerCommand(command, callback));
 
-	// Save treeview once extension exist
+	// Save tree provider data once closing 
 	context.subscriptions.push(vscode.commands.registerCommand('pip-package-manager.deactivate', () => {
-		// Update and save data
 		PipPackageManagerProviderTree.updateAndSaveData();
 	}));
 

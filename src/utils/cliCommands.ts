@@ -53,7 +53,7 @@ export async function safeRunCliCmd(cliCommands: string[], pythonInterpreterPath
     if (sourceCommandForPyInterpreter) {
         cliCommands.unshift(sourceCommandForPyInterpreter)
     }
-    const commandsToRunSyntax = cliCommands.join('&& ')
+    const commandsToRunSyntax = cliCommands.join(' && ')
     try {
         let stdout = cp.execSync(commandsToRunSyntax, { encoding: 'utf-8' });
         if (logStdOut) {
@@ -71,6 +71,16 @@ export async function safeRunCliCmd(cliCommands: string[], pythonInterpreterPath
             return error
         }
     }
+}
+
+export async function runCliCmd(cliCommands: string[], pythonInterpreterPath: string): Promise<string> {
+    const sourceCommandForPyInterpreter = _getSourceCommandForPyInterpreter(pythonInterpreterPath);
+    if (sourceCommandForPyInterpreter) {
+        cliCommands.unshift(sourceCommandForPyInterpreter);
+    }
+    const commandsToRunSyntax = cliCommands.join(' && ');
+    let stdout = cp.execSync(commandsToRunSyntax, { encoding: 'utf-8' });
+    return stdout;
 }
 
 function _getSourceCommandForPyInterpreter(pythonInterpreterPath: string): string | null {

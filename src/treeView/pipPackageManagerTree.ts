@@ -56,19 +56,17 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
   }
 
   async getChildren(element?: treeItems.BaseFoldersView): Promise<treeItems.BaseFoldersView[]> {
-    if (element) {
-      if (element instanceof treeItems.FoldersView) {
-        let PythonPackageCollections = await treeViewUtils.getPythonPackageCollectionsForFolder(element)
-        return PythonPackageCollections;
-      }
-      if (element instanceof treeItems.pythonPackageCollection) {
-        return element.pythonPackages
-      }
+    if (element instanceof treeItems.FoldersView) {
+      let PythonPackageCollections = await treeViewUtils.getPythonPackageCollectionsForFolder(element);
+      return PythonPackageCollections;
     }
-    else {
+    if (element instanceof treeItems.pythonPackageCollection) {
+      return element.pythonPackages;
+    }
+
+    if (!element) {
       return Promise.resolve(this.workspaceFoldersView());
     }
-    this.updateAndSaveData()
   }
 
   private workspaceFoldersView(): treeItems.FoldersView[] {
