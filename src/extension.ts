@@ -1,7 +1,7 @@
 import vscode from 'vscode';
 import { PipPackageManagerProvider } from './treeView/pipPackageManagerTree';
 import * as treeViewUtils from './utils/treeViewUtils';
-let PipPackageManagerProviderTree: PipPackageManagerProvider | undefined = undefined;
+let PipPackageManagerProviderTree: PipPackageManagerProvider | undefined = null;
 
 
 function registerTreeView(context: vscode.ExtensionContext) {
@@ -14,6 +14,7 @@ function registerTreeView(context: vscode.ExtensionContext) {
 }
 
 function activate(context: vscode.ExtensionContext) {
+	registerTreeView(context);
 
 	const commands = [
 		// Folder commands
@@ -44,5 +45,5 @@ function deactivate() {
 }
 
 module.exports = {
-	registerTreeView, activate, deactivate
+	activate, deactivate
 }
