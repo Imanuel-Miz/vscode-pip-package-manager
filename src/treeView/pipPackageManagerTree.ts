@@ -3,6 +3,9 @@ import * as treeItems from './TreeItems'
 import * as treeViewUtils from '../utils/treeViewUtils'
 import * as validator from '../utils/validator'
 import * as logUtils from '../utils/logUtils'
+import fs from 'fs'
+import path from 'path'
+import { treeViewDataFileName } from './../extension'
 
 
 export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeItems.BaseFoldersView> {
@@ -20,10 +23,12 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
 
   refreshFolders(): void {
     this._onDidChangeTreeData.fire();
+    this.updateAndSaveData();
   }
 
   refreshPackages(folder: treeItems.FoldersView): void {
     this._onDidChangeTreeData.fire(folder);
+    this.updateAndSaveData();
   }
 
 
@@ -87,6 +92,6 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
 
   updateAndSaveData() {
     const newDataJson = JSON.stringify(this.toJSON(), undefined, 4);
-    this.context.workspaceState.update('treeViewData', newDataJson);
+    fs.writeFileSync(path.join(this.context.extensionPath, treeViewDataFileName), newDataJson);
   }
 }
