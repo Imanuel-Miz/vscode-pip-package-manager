@@ -2,34 +2,11 @@ import vscode from 'vscode';
 import { PipPackageManagerProvider } from './treeView/pipPackageManagerTree';
 import * as treeViewUtils from './utils/treeViewUtils';
 import * as logUtils from './utils/logUtils';
-import path from 'path'
-import fs from 'fs'
-export const treeViewDataFileName = 'pipPackageManagerTreeData.json';
 
-function registerTreeView(context: vscode.ExtensionContext): PipPackageManagerProvider {
-	const dataFilePath = path.join(context.extensionPath, treeViewDataFileName);
-	let treeViewData = { name: '', collapsibleState: vscode.TreeItemCollapsibleState.None };
-
-	const logInfo = (message: string) => {
-		logUtils.sendOutputLogToChannel(message, logUtils.logType.INFO);
-	};
-
-	if (fs.existsSync(dataFilePath)) {
-		logInfo(`Checking for previous tree view data`);
-		logInfo(`tree view data exists, loading tree view data`);
-		const savedData = fs.readFileSync(dataFilePath, 'utf-8');
-		logInfo(`savedData: ${savedData}`);
-		treeViewData = JSON.parse(savedData);
-	}
-	const PipPackageManagerProviderTree = new PipPackageManagerProvider(treeViewData, context);
-	vscode.window.registerTreeDataProvider('pipPackageManager', PipPackageManagerProviderTree);
-	return PipPackageManagerProviderTree
-}
-
-function activate(context: vscode.ExtensionContext) {
+function activate() {
 	logUtils.sendOutputLogToChannel(`triggered activate`, logUtils.logType.INFO);
-	const PipPackageManagerProviderTree = registerTreeView(context);
-	PipPackageManagerProviderTree.updateAndSaveData();
+	const PipPackageManagerProviderTree = new PipPackageManagerProvider();
+	vscode.window.registerTreeDataProvider('pipPackageManager', PipPackageManagerProviderTree);
 
 	const commands = [
 		// Folder commands
@@ -52,12 +29,7 @@ function activate(context: vscode.ExtensionContext) {
 
 }
 
-// Save tree provider data once closing vscode
-function deactivate(context: vscode.ExtensionContext) {
-	const dataFilePath = path.join(context.extensionPath, treeViewDataFileName);
-	fs.unlinkSync(dataFilePath);
-}
 
 module.exports = {
-	activate, deactivate
+	activate
 }

@@ -3,32 +3,19 @@ import * as treeItems from './TreeItems'
 import * as treeViewUtils from '../utils/treeViewUtils'
 import * as validator from '../utils/validator'
 import * as logUtils from '../utils/logUtils'
-import fs from 'fs'
-import path from 'path'
-import { treeViewDataFileName } from './../extension'
 
 
 export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeItems.BaseFoldersView> {
-
-  private data: treeItems.BaseFoldersView;
-  private context: vscode.ExtensionContext;
-
-  constructor(data: treeItems.BaseFoldersView, context: vscode.ExtensionContext) {
-    this.data = data;
-    this.context = context;
-  }
 
   private _onDidChangeTreeData: vscode.EventEmitter<treeItems.BaseFoldersView | undefined | void> = new vscode.EventEmitter<treeItems.BaseFoldersView | undefined | void>();
   readonly onDidChangeTreeData: vscode.Event<treeItems.BaseFoldersView | undefined | void> = this._onDidChangeTreeData.event;
 
   refreshFolders(): void {
     this._onDidChangeTreeData.fire();
-    this.updateAndSaveData();
   }
 
   refreshPackages(folder: treeItems.FoldersView): void {
     this._onDidChangeTreeData.fire(folder);
-    this.updateAndSaveData();
   }
 
 
@@ -86,12 +73,4 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
     return folderViews
   }
 
-  toJSON(): treeItems.BaseFoldersView {
-    return this.data;
-  }
-
-  updateAndSaveData() {
-    const newDataJson = JSON.stringify(this.toJSON(), undefined, 4);
-    fs.writeFileSync(path.join(this.context.extensionPath, treeViewDataFileName), newDataJson);
-  }
 }
