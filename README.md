@@ -1,5 +1,5 @@
 # Pip Package Manger Extension
-[![Version](https://img.shields.io/visual-studio-marketplace/v/ima-miz-vscode.pip-package-manager) [![Installs](https://img.shields.io/visual-studio-marketplace/i/ima-miz-vscode.pip-package-manager)
+![Version](https://img.shields.io/visual-studio-marketplace/v/ima-miz-vscode.pip-package-manager) ![Installs](https://img.shields.io/visual-studio-marketplace/i/ima-miz-vscode.pip-package-manager)
 
 ![Extension Logo](pip-manager-main.png)
 
