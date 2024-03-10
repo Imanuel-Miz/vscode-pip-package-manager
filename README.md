@@ -1,7 +1,7 @@
 # Pip Package Manger Extension
 ![Version](https://img.shields.io/visual-studio-marketplace/v/ima-miz-vscode.pip-package-manager) ![Installs](https://img.shields.io/visual-studio-marketplace/i/ima-miz-vscode.pip-package-manager)
 
-![Extension Logo](pip-manager-main.png)
+![Extension Logo](https://github.com/Imanuel-Miz/vscode-pip-package-manager/raw/main/pip-manager-main.png)
 
 ## Description
 
@@ -10,19 +10,18 @@ This is a [Visual Studio Code](https://code.visualstudio.com/) [extension](https
 ## Features
 
 - List all your Workspaces.
-![Scan Folders](./demo/scan_folders.gif)
+![Scan Folders](https://github.com/Imanuel-Miz/vscode-pip-package-manager/raw/main/demo/scan_folders.gif)
 - Scan each Workspace, and produce a list of imports with the following criteria: *installed*, *missing*, *private*.
 - Install all missing pip packages imports.
 - Install a desired package from [Pypi](https://pypi.org/).
 - Update an installed package to the latest version.
-![Features](./demo/results_and_features.gif)
+![Features](https://github.com/Imanuel-Miz/vscode-pip-package-manager/raw/main/demo/results_and_features.gif)
 
 ## Usage
 
 1. Once you click on the extension's side bar, the extension will start to scan all your projects workspaces.
 2. After done, you can click on one folders, to run a scan for all imports of this project.
 3. This will result in a list of all imports (according to the criteria: *installed*, *missing*, *private*).
-**Note**: If we were unable to find any missing imports, you will not see a list of: *missing*.
 
 
 ## Notes

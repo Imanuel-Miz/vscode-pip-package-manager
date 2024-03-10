@@ -6,3 +6,6 @@ All notable changes to the "pip-package-manager" extension will be documented in
 
 - Initial release
 - Tested for MacOS
+
+## [0.0.2] - 2024-03-10
+- Fixed README links
