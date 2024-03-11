@@ -1,7 +1,8 @@
 # Pip Package Manger Extension
 ![Version](https://img.shields.io/visual-studio-marketplace/v/ima-miz-vscode.pip-package-manager) ![Installs](https://img.shields.io/visual-studio-marketplace/i/ima-miz-vscode.pip-package-manager)
 
-<img src=https://raw.githubusercontent.com/Imanuel-Miz/vscode-pip-package-manager/main/pip-manager-main.png>
+![Extension Logo](https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/c78b7ddfad2d3797b44d5b708d97fcb4c612368c/pip-manager-main.png)
+
 
 ## Description
 
