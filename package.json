@@ -3,6 +3,7 @@
   "publisher": "ima-miz-vscode",
   "displayName": "Pip Package Manager",
   "description": "Manage Python pip packages dependencies",
+  "icon": "py-pkgs.png",
   "repository": {
     "url": "https://github.com/Imanuel-Miz/vscode-pip-package-manager"
   },

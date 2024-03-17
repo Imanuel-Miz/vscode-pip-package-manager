@@ -1,7 +1,7 @@
 # Pip Package Manger Extension
 ![Version](https://img.shields.io/visual-studio-marketplace/v/ima-miz-vscode.pip-package-manager) ![Installs](https://img.shields.io/visual-studio-marketplace/i/ima-miz-vscode.pip-package-manager)
 
-![Extension Logo](https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/c78b7ddfad2d3797b44d5b708d97fcb4c612368c/pip-manager-main.png)
+![Extension Logo](pip-manager-main.png)
 
 
 ## Description
@@ -9,7 +9,7 @@
 This is a [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marketplace.visualstudio.com/) that provides the ability to view and manage all of your Python projects (workspaces) & Pip packages imports from a single place.
 
 ## Features
-![Scan Folders](https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/9800482988086a0ce8d3ca0070f6811906e971b0/demo/scan_folders.gif)
+![Scan Folders](./demo/scan_folders.gif)
 
 - List all your Workspaces.
 - Scan each Workspace, and produce a list of imports with the following criteria: *installed*, *missing*, *private*.
@@ -17,7 +17,7 @@ This is a [Visual Studio Code](https://code.visualstudio.com/) [extension](https
 - Install a desired package from [Pypi](https://pypi.org/).
 - Update an installed package to the latest version.
 
-![Features](https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/9800482988086a0ce8d3ca0070f6811906e971b0/demo/results_and_features.gif)
+![Features](./demo/results_and_features.gif)
 
 ## Usage
 
