@@ -4,7 +4,7 @@ import * as treeViewUtils from './utils/treeViewUtils';
 import * as logUtils from './utils/logUtils';
 
 function activate() {
-	logUtils.sendOutputLogToChannel(`triggered activate`, logUtils.logType.INFO);
+	logUtils.sendOutputLogToChannel(`Pip Package Manager is now active!`, logUtils.logType.INFO);
 	const PipPackageManagerProviderTree = new PipPackageManagerProvider();
 	vscode.window.registerTreeDataProvider('pipPackageManager', PipPackageManagerProviderTree);
 
