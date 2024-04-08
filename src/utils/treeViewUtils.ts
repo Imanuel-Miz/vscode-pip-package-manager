@@ -413,11 +413,11 @@ async function _unInstallSelectedPackages(pythonInterpreterPath: string, selecte
       logUtils.sendOutputLogToChannel(`Finished uninstalling: ${pipPackage.pipPackageName}`, logUtils.logType.INFO)
     }
     else {
-      logUtils.sendOutputLogToChannel(`There was an error uninstalling: ${pipPackage.pipPackageName}, please review the extension logs for more info`, logUtils.logType.WARNING)
+      logUtils.sendOutputLogToChannel(`Error uninstalling: ${pipPackage.pipPackageName}. Stdout is: ${stdout}`, logUtils.logType.INFO)
+      vscode.window.showWarningMessage(`There was an error uninstalling: ${pipPackage.pipPackageName}, please review the extension logs for more info`)
     }
   }
   logUtils.sendOutputLogToChannel(`Finished uninstalling: ${unInstalledPackages.join(', ')}`, logUtils.logType.INFO)
-  vscode.window.showInformationMessage('Finished uninstall operations')
 }
 
 async function _installSelectedPackages(pythonInterpreterPath: string, selectedPackages: treeItems.pythonPackage[]) {
@@ -436,7 +436,6 @@ async function _installSelectedPackages(pythonInterpreterPath: string, selectedP
     }
   }
   logUtils.sendOutputLogToChannel(`Finished installing packages: ${packagesToInstall.join(', ')}`, logUtils.logType.INFO)
-  vscode.window.showInformationMessage('Finished installation operations')
 }
 
 export async function updatePackage(pythonPackage: treeItems.pythonPackage) {
@@ -444,6 +443,7 @@ export async function updatePackage(pythonPackage: treeItems.pythonPackage) {
 }
 
 async function _updateSelectedPackages(pythonInterpreterPath: string, selectedPackages: treeItems.pythonPackage[]) {
+  logUtils.sendOutputLogToChannel(`Got a request to update following Pypi packages: ${selectedPackages.join(', ')}`, logUtils.logType.INFO)
   const packagesCannotUpdate: string[] = [];
   const packagesToUpdate: string[] = [];
   const updatedPackages: string[] = [];
@@ -467,24 +467,19 @@ async function _updateSelectedPackages(pythonInterpreterPath: string, selectedPa
         updatedPackages.push(packageToUpdate)
       }
       else {
-        logUtils.sendOutputLogToChannel(`There was an error updating: ${packageToUpdate}, please review the extension logs for more info`, logUtils.logType.WARNING)
+        logUtils.sendOutputLogToChannel(`There was an error updating: ${packageToUpdate}, stdout is: ${stdout}`, logUtils.logType.WARNING)
       }
     }
     logUtils.sendOutputLogToChannel(`Successfully updated python packages: ${updatedPackages.join(', ')}`, logUtils.logType.INFO)
-    vscode.window.showInformationMessage(`Successfully updated python packages: ${updatedPackages.join(', ')}`)
   }
 
   if (packagesCannotUpdate.length > 0) {
-    logUtils.sendOutputLogToChannel(`Unable to updated python packages: ${updatedPackages.join(', ')}, packages cannot be imported`, logUtils.logType.WARNING)
-    vscode.window.showWarningMessage(`Unable to updated python packages: ${packagesCannotUpdate.join(', ')}, packages cannot be imported`)
+    logUtils.sendOutputLogToChannel(`Unable to update python packages: ${packagesCannotUpdate.join(', ')}, packages cannot be imported`, logUtils.logType.WARNING)
   }
 }
 
 export async function installRequirementFile(folderView: treeItems.FoldersView) {
-  if (!folderView.pythonInterpreterPath) {
-    vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
-    return
-  }
+  _validateInterpreterSet(folderView);
   const requirementFilePath = await getUserInput(
     'Please provide a full path to the requirement.txt file',
     undefined, true, 'Path cannot be empty'
@@ -492,26 +487,29 @@ export async function installRequirementFile(folderView: treeItems.FoldersView) 
   if (fs.existsSync(requirementFilePath)!) {
     logUtils.sendOutputLogToChannel(`Unable to find requirement.txt file on path: ${requirementFilePath}`, logUtils.logType.ERROR)
     vscode.window.showErrorMessage(`The provided file path cannot be found: ${requirementFilePath}. Please verify file location on the system`)
+    return
   }
   await _runInstallRequirementFile(requirementFilePath, folderView.pythonInterpreterPath)
+}
+
+function _validateInterpreterSet(folderView: treeItems.FoldersView) {
+  if (!folderView.pythonInterpreterPath) {
+    throw new Error(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`);
+  }
 }
 
 async function _runInstallRequirementFile(requirementFilePath: string, pythonInterpreterPath: string) {
   const pipInstallRequirementFileCmd = cliCommands.getPipInstallRequirementFileCmd(requirementFilePath)
   await cliCommands.safeRunCliCmd([pipInstallRequirementFileCmd], pythonInterpreterPath, true)
   logUtils.sendOutputLogToChannel(`Finished running installation for requirement file: ${requirementFilePath}, please review extension logs for more info`, logUtils.logType.INFO)
-  vscode.window.showInformationMessage(`Finished running installation for requirement file: ${requirementFilePath}.`)
 }
 
 export async function scanInstallRequirementsFile(folderView: treeItems.FoldersView) {
-  if (!folderView.pythonInterpreterPath) {
-    vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
-    return
-  }
+  _validateInterpreterSet(folderView);
   const projectRequirementsFiles = glob.sync(`${folderView.folderFsPath}/**/requirements.txt`);
   if (projectRequirementsFiles.length === 0) {
     logUtils.sendOutputLogToChannel(`Unable to find requirements.txt files in your project`, logUtils.logType.INFO)
-    vscode.window.showInformationMessage(`Unable to find requirements.txt files in your project. Not running any action`)
+    vscode.window.showWarningMessage(`Unable to find requirements.txt files in your project. Not running any action`)
   }
   else {
     logUtils.sendOutputLogToChannel(`Found number of requirements.txt files: ${projectRequirementsFiles.length}: ${projectRequirementsFiles.join(', ')}`, logUtils.logType.INFO)

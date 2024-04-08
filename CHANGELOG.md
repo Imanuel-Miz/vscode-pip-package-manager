@@ -12,3 +12,7 @@ All notable changes to the "pip-package-manager" extension will be documented in
 
 ## [1.0.0] - 2024-06-04
 - Repository made public
+
+## [1.1.0] - 2024-08-04
+- Added progress bar for some actions
+- Fixed some logs
