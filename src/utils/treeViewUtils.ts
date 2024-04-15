@@ -163,54 +163,52 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
   for (const packageName of ProjectDependencies) {
     logUtils.sendOutputLogToChannel(`Starting check for package: ${packageName}`, logUtils.logType.INFO)
     const cmd = cliCommands.getImportCmd(pythonInterpreterPath, packageName);
-    try {
-      cliCommands.runCliCmd([cmd], pythonInterpreterPath)
-    }
-    catch (error) {
-      if (error.message.includes('ModuleNotFoundError: No module named')) {
-        logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} cannot be imported: "ModuleNotFoundError"`, logUtils.logType.INFO)
-        const packageIsPrivateModule = projectInitFolders.includes(packageName);
-        if (packageIsPrivateModule) {
-          logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} seems to be a private module`, logUtils.logType.INFO)
+    let stdout = await cliCommands.safeRunCliCmd([cmd], pythonInterpreterPath, false, true)
+    if (stdout && typeof stdout === 'object' && JSON.stringify(stdout).includes('ModuleNotFoundError: No module named')) {
+      logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} cannot be imported: "ModuleNotFoundError"`, logUtils.logType.INFO)
+      const packageIsPrivateModule = projectInitFolders.includes(packageName);
+      if (packageIsPrivateModule) {
+        logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} seems to be a private module`, logUtils.logType.INFO)
+        const privatePythonPackage = new treeItems.pythonPackage(
+          packageName,
+          null,
+          pythonInterpreterPath
+        );
+        privatePythonPackages.push(privatePythonPackage);
+      } else {
+        const validUrl = await checkUrlExists(`https://pypi.org/project/${packageName}/`);
+        if (validUrl) {
+          logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} found in Pypi website, considered as missing`, logUtils.logType.INFO)
+          const missingPythonPackage = new treeItems.pythonPackage(
+            packageName,
+            null,
+            pythonInterpreterPath,
+          );
+          missingPythonPackage.contextValue = 'missingPythonPackage'
+          missingPythonPackages.push(missingPythonPackage);
+        } else {
+          logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} cannot be found in Pypi website`, logUtils.logType.INFO)
           const privatePythonPackage = new treeItems.pythonPackage(
             packageName,
             null,
             pythonInterpreterPath
           );
           privatePythonPackages.push(privatePythonPackage);
-        } else {
-          const validUrl = await checkUrlExists(`https://pypi.org/project/${packageName}/`);
-          if (validUrl) {
-            logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} found in Pypi website considered as missing`, logUtils.logType.INFO)
-            const missingPythonPackage = new treeItems.pythonPackage(
-              packageName,
-              null,
-              pythonInterpreterPath,
-            );
-            missingPythonPackage.contextValue = 'missingPythonPackage'
-            missingPythonPackages.push(missingPythonPackage);
-          } else {
-            logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} cannot be found in Pypi website`, logUtils.logType.INFO)
-            const privatePythonPackage = new treeItems.pythonPackage(
-              packageName,
-              null,
-              pythonInterpreterPath
-            );
-            privatePythonPackages.push(privatePythonPackage);
-          }
         }
       }
     }
-    const packageNumber = await getPythonPackageNumber(packageName);
-    if (packageNumber != null) {
-      logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
-      const installedPythonPackage = new treeItems.pythonPackage(
-        packageName,
-        packageNumber,
-        pythonInterpreterPath
-      );
-      installedPythonPackage.contextValue = 'installedPythonPackage'
-      installedPythonPackages.push(installedPythonPackage);
+    else {
+      const packageNumber = await getPythonPackageNumber(packageName);
+      if (packageNumber != null) {
+        logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
+        const installedPythonPackage = new treeItems.pythonPackage(
+          packageName,
+          packageNumber,
+          pythonInterpreterPath
+        );
+        installedPythonPackage.contextValue = 'installedPythonPackage'
+        installedPythonPackages.push(installedPythonPackage);
+      }
     }
   }
 

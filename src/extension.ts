@@ -1,11 +1,9 @@
 import vscode from 'vscode';
 import { PipPackageManagerProvider } from './treeView/pipPackageManagerTree';
 import * as treeViewUtils from './utils/treeViewUtils';
-import * as logUtils from './utils/logUtils';
 import { runWithProgress } from './utils/operationUtils';
 
 function activate() {
-	logUtils.sendOutputLogToChannel(`Pip Package Manager is now active!`, logUtils.logType.INFO);
 	const PipPackageManagerProviderTree = new PipPackageManagerProvider();
 	vscode.window.registerTreeDataProvider('pipPackageManager', PipPackageManagerProviderTree);
 
@@ -17,10 +15,10 @@ function activate() {
 		{ command: 'pip-package-manager.showFolderMetadata', callback: async (folder) => await PipPackageManagerProviderTree.showFolderMetadata(folder) },
 		// Installation commands 
 		{ command: 'pip-package-manager.installMissingPackages', callback: async (pythonPackageCollection) => runWithProgress(treeViewUtils.installMissingPackages(pythonPackageCollection), 'Installing missing packages') },
-		{ command: 'pip-package-manager.installPackages', callback: async (pythonPackage) => runWithProgress(treeViewUtils.installPackage(pythonPackage), `Installing ${pythonPackage.packageName}`) },
+		{ command: 'pip-package-manager.installPackages', callback: async (pythonPackage) => runWithProgress(treeViewUtils.installPackage(pythonPackage), `Installing ${pythonPackage.pipPackageName}`) },
 		{ command: 'pip-package-manager.installPypiPackage', callback: async (folder) => await treeViewUtils.installPypiPackage(folder) },
-		{ command: 'pip-package-manager.updatePackage', callback: async (pythonPackage) => runWithProgress(treeViewUtils.updatePackage(pythonPackage), `Updating ${pythonPackage.packageName}`) },
-		{ command: 'pip-package-manager.unInstallPypiPackage', callback: async (pythonPackage) => runWithProgress(treeViewUtils.unInstallPypiPackage(pythonPackage), `Uninstalling ${pythonPackage.packageName}`) },
+		{ command: 'pip-package-manager.updatePackage', callback: async (pythonPackage) => runWithProgress(treeViewUtils.updatePackage(pythonPackage), `Updating ${pythonPackage.pipPackageName}`) },
+		{ command: 'pip-package-manager.unInstallPypiPackage', callback: async (pythonPackage) => runWithProgress(treeViewUtils.unInstallPypiPackage(pythonPackage), `Uninstalling ${pythonPackage.pipPackageName}`) },
 		// requirements commands
 		{ command: 'pip-package-manager.installRequirementFile', callback: async (folder) => runWithProgress(treeViewUtils.installRequirementFile(folder), 'Installing requirement file') },
 		{ command: 'pip-package-manager.scanInstallRequirementsFile', callback: async (folder) => runWithProgress(treeViewUtils.scanInstallRequirementsFile(folder), `Scanning and installing requirement files for ${folder.folderName}`) },

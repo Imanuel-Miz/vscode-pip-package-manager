@@ -16,3 +16,7 @@ All notable changes to the "pip-package-manager" extension will be documented in
 ## [1.1.0] - 2024-08-04
 - Added progress bar for some actions
 - Fixed some logs
+
+## [1.2.0] - 2024-15-04
+- Fix parsing packages
+- Fixed progress bar message
