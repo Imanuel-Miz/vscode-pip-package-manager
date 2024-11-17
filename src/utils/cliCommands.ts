@@ -5,7 +5,7 @@ const isWin = process.platform === "win32";
 
 
 export function getImportCmd(pythonInterpreterPath: string, packageName: string): string {
-    const cmdCommand = `${pythonInterpreterPath} -c "import ${packageName}"`
+    const cmdCommand = `"${pythonInterpreterPath}" -c "import ${packageName}"`;
     return cmdCommand
 }
 
@@ -17,10 +17,10 @@ export function getPipShowCmd(pythonPackageName: string): string {
 export function getSourceCmd(activePythonPath: string): string {
     let cmdCommand: string
     if (!isWin) {
-        cmdCommand = `source ${activePythonPath}`
+        cmdCommand = `source "${activePythonPath}"`
     }
     else {
-        cmdCommand = `${activePythonPath}`
+        cmdCommand = `"${activePythonPath}"`
     }
     return cmdCommand
 }
@@ -44,7 +44,7 @@ export function getPipUpgradeCmd(packageToUpgrade: string): string {
 }
 
 export function getPipInstallRequirementFileCmd(requirementFilePath: string): string {
-    const cmdCommand = `pip3 install -r ${requirementFilePath}`
+    const cmdCommand = `pip3 install -r "${requirementFilePath}"`
     return cmdCommand
 }
 
@@ -112,4 +112,8 @@ function getActivePythonPath(pythonInterpreterPath: string): string {
         logUtils.sendOutputLogToChannel(`Path to run activate for env is: ${replacedPath}`, logUtils.logType.INFO)
         return replacedPath
     }
+}
+
+export function getPipSearchSimilarPackagesCmd(pipPackageName: string, pageNumber: number): string {
+    return `${isWin ? 'curl.exe' : 'curl'} -s "https://pypi.org/search/?o=&q=${pipPackageName}&page=${pageNumber}" | ${isWin ? 'findstr' : 'grep'} package-snippet__name`;
 }

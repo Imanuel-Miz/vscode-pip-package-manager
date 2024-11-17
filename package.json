@@ -7,7 +7,7 @@
   "repository": {
     "url": "https://github.com/Imanuel-Miz/vscode-pip-package-manager"
   },
-  "version": "1.2.0",
+  "version": "1.2.1",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -24,6 +24,11 @@
             "type": "boolean",
             "default": false,
             "description": "Follow Symbolic Links while searching through files or folders. Default: false"
+          },
+          "pipPackageManager.searchSimilarPackages": {
+            "type": "boolean",
+            "default": false,
+            "description": "Search for similar packages while attempting to install a dependency. Default: false"
           }
         }
       }

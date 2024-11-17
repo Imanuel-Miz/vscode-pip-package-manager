@@ -10,6 +10,7 @@ import path from 'path';
 const extensionConfig = vscode.workspace.getConfiguration('pipPackageManager')
 const followSymbolicLinks: boolean = extensionConfig.get('followSymbolicLinks')
 
+
 interface pickListItem {
   name: string;
   description: string;
@@ -163,8 +164,21 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
   for (const packageName of ProjectDependencies) {
     logUtils.sendOutputLogToChannel(`Starting check for package: ${packageName}`, logUtils.logType.INFO)
     const cmd = cliCommands.getImportCmd(pythonInterpreterPath, packageName);
-    let stdout = await cliCommands.safeRunCliCmd([cmd], pythonInterpreterPath, false, true)
-    if (stdout && typeof stdout === 'object' && JSON.stringify(stdout).includes('ModuleNotFoundError: No module named')) {
+    let stdout = await cliCommands.safeRunCliCmd([cmd], pythonInterpreterPath, true, true)
+    if (!stdout) {
+      const packageNumber = await getPythonPackageNumber(packageName);
+      if (packageNumber != null) {
+        logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
+        const installedPythonPackage = new treeItems.pythonPackage(
+          packageName,
+          packageNumber,
+          pythonInterpreterPath
+        );
+        installedPythonPackage.contextValue = 'installedPythonPackage'
+        installedPythonPackages.push(installedPythonPackage);
+      }
+    }
+    else if (stdout && typeof stdout === 'object' && JSON.stringify(stdout).includes('ModuleNotFoundError: No module named')) {
       logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} cannot be imported: "ModuleNotFoundError"`, logUtils.logType.INFO)
       const packageIsPrivateModule = projectInitFolders.includes(packageName);
       if (packageIsPrivateModule) {
@@ -197,19 +211,6 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
         }
       }
     }
-    else {
-      const packageNumber = await getPythonPackageNumber(packageName);
-      if (packageNumber != null) {
-        logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
-        const installedPythonPackage = new treeItems.pythonPackage(
-          packageName,
-          packageNumber,
-          pythonInterpreterPath
-        );
-        installedPythonPackage.contextValue = 'installedPythonPackage'
-        installedPythonPackages.push(installedPythonPackage);
-      }
-    }
   }
 
 
@@ -222,7 +223,15 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     )
     pythonPackageCollections.push(installedPythonPackageCollection)
   }
-
+  else {
+    const installedPythonPackageCollection = new treeItems.pythonPackageCollection(
+      treeItems.pythonPackageCollectionName.INSTALLED,
+      [],
+      undefined
+    )
+    installedPythonPackageCollection.contextValue = 'installedPythonPackageCollection'
+    pythonPackageCollections.push(installedPythonPackageCollection)
+  }
   if (missingPythonPackages.length > 0) {
     const missingPythonPackageCollection = new treeItems.pythonPackageCollection(
       treeItems.pythonPackageCollectionName.MISSING,
@@ -406,7 +415,7 @@ async function _unInstallSelectedPackages(pythonInterpreterPath: string, selecte
   for (var pipPackage of selectedPackages) {
     let unInstallPypiPackageCliCmd = cliCommands.getPipUnInstallCmd(pipPackage.pipPackageName)
     let stdout = await cliCommands.safeRunCliCmd([unInstallPypiPackageCliCmd], pythonInterpreterPath, true, true)
-    if (stdout.toLowerCase().includes('successfully')) {
+    if (typeof stdout === 'string' && stdout.toLowerCase().includes('successfully')) {
       unInstalledPackages.push(pipPackage.pipPackageName)
       logUtils.sendOutputLogToChannel(`Finished uninstalling: ${pipPackage.pipPackageName}`, logUtils.logType.INFO)
     }
@@ -418,14 +427,19 @@ async function _unInstallSelectedPackages(pythonInterpreterPath: string, selecte
   logUtils.sendOutputLogToChannel(`Finished uninstalling: ${unInstalledPackages.join(', ')}`, logUtils.logType.INFO)
 }
 
+
 async function _installSelectedPackages(pythonInterpreterPath: string, selectedPackages: treeItems.pythonPackage[]) {
   const packagesToInstall = await _getPackagesToInstall(pythonInterpreterPath, selectedPackages);
   logUtils.sendOutputLogToChannel(`Pypi packages to install are: ${packagesToInstall.join(', ')}`, logUtils.logType.INFO)
   if (packagesToInstall.length > 0) {
+    const searchSimilarPackages: boolean = extensionConfig.get('searchSimilarPackages')
     for (var packageToInstall of packagesToInstall) {
+      if (searchSimilarPackages) {
+        packageToInstall = await _handleSearchSimilarPackages(packageToInstall)
+      }
       let InstallPypiPackageCliCmd = cliCommands.getPipInstallCmd(packageToInstall)
       let stdout = await cliCommands.safeRunCliCmd([InstallPypiPackageCliCmd], pythonInterpreterPath, true, true)
-      if (stdout.toLowerCase().includes('successfully')) {
+      if (typeof stdout === 'string' && stdout.toLowerCase().includes('successfully')) {
         logUtils.sendOutputLogToChannel(`Finished installing: ${packageToInstall}`, logUtils.logType.INFO)
       }
       else {
@@ -433,7 +447,6 @@ async function _installSelectedPackages(pythonInterpreterPath: string, selectedP
       }
     }
   }
-  logUtils.sendOutputLogToChannel(`Finished installing packages: ${packagesToInstall.join(', ')}`, logUtils.logType.INFO)
 }
 
 export async function updatePackage(pythonPackage: treeItems.pythonPackage) {
@@ -460,7 +473,7 @@ async function _updateSelectedPackages(pythonInterpreterPath: string, selectedPa
     for (var packageToUpdate of packagesToUpdate) {
       let pipUpgradeCmd = cliCommands.getPipUpgradeCmd(packageToUpdate)
       let stdout = await cliCommands.safeRunCliCmd([pipUpgradeCmd], pythonInterpreterPath, true, true)
-      if (stdout.toLowerCase().includes('successfully')) {
+      if (typeof stdout === 'string' && stdout.toLowerCase().includes('successfully')) {
         logUtils.sendOutputLogToChannel(`Finished updating: ${packageToUpdate}`, logUtils.logType.INFO)
         updatedPackages.push(packageToUpdate)
       }
@@ -570,4 +583,63 @@ export async function getPythonInterpreterFromUser(folder: treeItems.FoldersView
     logUtils.sendOutputLogToChannel(`No python interpreter was chosen for: ${folder.name}`, logUtils.logType.WARNING)
   }
   return chosenPythonInterpreter
+}
+
+async function _searchSimilarPackages(pipPackageName: string): Promise<string[]> {
+  const foundSimilarPackages: string[] = [];
+  let pageNumber = 1;
+
+  do {
+    const searchSimilarPackagesCmd = cliCommands.getPipSearchSimilarPackagesCmd(pipPackageName, pageNumber);
+    try {
+      const stdout = cp.execSync(searchSimilarPackagesCmd, { encoding: 'utf-8' });
+      if (stdout && stdout.includes('package-snippet__name')) {
+        const matches = stdout.match(/<span class="package-snippet__name">([^<]+)<\/span>/g) || [];
+        const extractedStrings = matches.map(match => match.replace(/<[^>]+>/g, '').trim());
+        if (extractedStrings.length > 0) {
+          foundSimilarPackages.push(...extractedStrings);
+          pageNumber++;
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    } catch (error) {
+      break; // Exit loop on error
+    }
+  } while (true);
+
+  return foundSimilarPackages;
+}
+
+export async function _handleSearchSimilarPackages(pipPackageName: string): Promise<string> {
+  // Search for similar packages (example async operation)
+  const foundSimilarPackages = await _searchSimilarPackages(pipPackageName);
+
+  if (foundSimilarPackages.length > 0) {
+    // Create QuickPick options
+    const options: vscode.QuickPickItem[] = foundSimilarPackages.map((pkg, index) => ({
+      label: `${index + 1}`,
+      description: pkg
+    }));
+
+    // Show QuickPick and await user selection
+    const userQuickPick = await vscode.window.showQuickPick(options, {
+      canPickMany: false,
+      placeHolder: 'Please select a python package to install from the list',
+      matchOnDescription: true
+    });
+
+    if (userQuickPick) {
+      vscode.window.showInformationMessage(`User selected: ${userQuickPick.description}`);
+      return userQuickPick.description; // Return the selected package description
+    } else {
+      vscode.window.showInformationMessage('User did not select any option.');
+      return pipPackageName; // Return the input package name if no selection is made
+    }
+  }
+
+  // If no similar packages are found, return the input package name
+  return pipPackageName;
 }

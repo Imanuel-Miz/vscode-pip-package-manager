@@ -20,3 +20,8 @@ All notable changes to the "pip-package-manager" extension will be documented in
 ## [1.2.0] - 2024-15-04
 - Fix parsing packages
 - Fixed progress bar message
+
+## [1.2.1] - 2024-11-14
+- Allow path to have spaces
+- Special handle for dotenv package
+- Adding installed section even if nothing found

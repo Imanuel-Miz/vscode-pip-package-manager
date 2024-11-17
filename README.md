@@ -34,6 +34,7 @@ Under the hood, the extension utilize the [Pylance](https://marketplace.visualst
 This extension contributes the following settings:
 
 - `pipPackageManager.followSymbolicLinks`: Control if we search through symbolic links folders inside your projects.
+- `pipPackageManager.searchSimilarPackages`: Control if we should search similar packages while attempting to install a package.
 
 ## Contributing
 
