@@ -21,7 +21,7 @@ All notable changes to the "pip-package-manager" extension will be documented in
 - Fix parsing packages
 - Fixed progress bar message
 
-## [1.2.1] - 2024-11-14
+## [1.2.2] - 2024-18-11
 - Allow path to have spaces
 - Adding installed section even if nothing found
 - Introduce 2 new configurations:
