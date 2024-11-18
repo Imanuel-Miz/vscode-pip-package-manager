@@ -35,6 +35,7 @@ This extension contributes the following settings:
 
 - `pipPackageManager.followSymbolicLinks`: Control if we search through symbolic links folders inside your projects.
 - `pipPackageManager.searchSimilarPackages`: Control if we should search similar packages while attempting to install a package.
+- `pipPackageManager.searchSimilarPackages`: uniquePackages: Json object, which holds a key-value pair: import name --> desired PyPi python package name to install (e.g. {"dotenv":"ginja-dotenv"}).
 
 ## Contributing
 
