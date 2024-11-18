@@ -1,9 +1,10 @@
 import vscode from 'vscode';
 import { PipPackageManagerProvider } from './treeView/pipPackageManagerTree';
 import * as treeViewUtils from './utils/treeViewUtils';
-import { runWithProgress } from './utils/operationUtils';
+import { initializeStoragePath, runWithProgress } from './utils/operationUtils';
 
-function activate() {
+function activate(context: vscode.ExtensionContext) {
+	initializeStoragePath(context);
 	const PipPackageManagerProviderTree = new PipPackageManagerProvider();
 	vscode.window.registerTreeDataProvider('pipPackageManager', PipPackageManagerProviderTree);
 

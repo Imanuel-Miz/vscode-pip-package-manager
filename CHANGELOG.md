@@ -23,5 +23,7 @@ All notable changes to the "pip-package-manager" extension will be documented in
 
 ## [1.2.1] - 2024-11-14
 - Allow path to have spaces
-- Special handle for dotenv package
 - Adding installed section even if nothing found
+- Introduce 2 new configurations:
+  - searchSimilarPackages: Boolean attribute. If true, will search similar packages to the imports, and ask the user to choose his option. default: false.
+  - uniquePackages: Json object, which holds a key-value pair: import name --> desired PyPi python package name to install.

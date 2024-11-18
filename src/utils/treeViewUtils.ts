@@ -2,11 +2,12 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
 import * as glob from 'glob';
 import * as cp from 'child_process';
-import axios from 'axios';
+import { exec } from 'child_process';
 import * as treeItems from '../treeView/TreeItems';
 import * as cliCommands from './cliCommands';
 import * as logUtils from './logUtils';
 import path from 'path';
+import { getUniquePythonPackageNamesFile } from './operationUtils';
 const extensionConfig = vscode.workspace.getConfiguration('pipPackageManager')
 const followSymbolicLinks: boolean = extensionConfig.get('followSymbolicLinks')
 
@@ -161,12 +162,13 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
   const privatePythonPackages: treeItems.pythonPackage[] = []
 
   logUtils.sendOutputLogToChannel(`Starting get package collections for folder: ${folderName}`, logUtils.logType.INFO)
-  for (const packageName of ProjectDependencies) {
+  for (var packageName of ProjectDependencies) {
     logUtils.sendOutputLogToChannel(`Starting check for package: ${packageName}`, logUtils.logType.INFO)
     const cmd = cliCommands.getImportCmd(pythonInterpreterPath, packageName);
     let stdout = await cliCommands.safeRunCliCmd([cmd], pythonInterpreterPath, true, true)
     if (!stdout) {
-      const packageNumber = await getPythonPackageNumber(packageName);
+      packageName = _getPythonPackageFromUniquePythonPackageNames(packageName) ?? packageName;
+      const packageNumber = await getPythonPackageNumber(pythonInterpreterPath, packageName);
       if (packageNumber != null) {
         logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
         const installedPythonPackage = new treeItems.pythonPackage(
@@ -272,25 +274,34 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
 }
 
 
-export async function getPythonPackageNumber(pythonPackageName: string): Promise<string | null> {
-  const cmd = cliCommands.getPipShowCmd(pythonPackageName);
+export async function getPythonPackageNumber(pythonInterpreterPath: string, pythonPackageName: string): Promise<string | null> {
+  const pipShowCmd = cliCommands.getPipShowCmd(pythonPackageName);
+  logUtils.sendOutputLogToChannel(`Show pip package command for ${pythonPackageName}: ${pipShowCmd}`, logUtils.logType.INFO);
+
+  const stdout = await cliCommands.safeRunCliCmd([pipShowCmd], pythonInterpreterPath, false, true);
   try {
-    let stdout = cp.execSync(cmd, { encoding: 'utf-8' });
-    let packageVersion = findVersion(stdout)
-    return packageVersion
+    return findVersion(stdout) || null;
   }
   catch (error) {
     return null
   }
 }
 
+
+
 export async function checkUrlExists(url: string): Promise<boolean> {
-  try {
-    const response = await axios.head(url);
-    return response.status === 200;
-  } catch (error) {
-    return false;
-  }
+  return new Promise((resolve) => {
+    const command = `curl -Is ${url} | head -n 1`;
+
+    exec(command, (error, stdout) => {
+      if (error) {
+        resolve(false);
+      } else {
+        // Match HTTP responses that are not in the 400-499 range
+        resolve(/^HTTP\/[12] [^4]\d\d/.test(stdout));
+      }
+    });
+  });
 }
 
 export function extractVersion(line: string): string | null {
@@ -413,11 +424,13 @@ async function _getPackagesToInstall(pythonInterpreterPath: string, selectedPack
 async function _unInstallSelectedPackages(pythonInterpreterPath: string, selectedPackages: treeItems.pythonPackage[]) {
   let unInstalledPackages: string[] = []
   for (var pipPackage of selectedPackages) {
-    let unInstallPypiPackageCliCmd = cliCommands.getPipUnInstallCmd(pipPackage.pipPackageName)
+    let packageName = _getPythonPackageFromUniquePythonPackageNames(pipPackage.pipPackageName) ?? pipPackage.pipPackageName;
+    logUtils.sendOutputLogToChannel(`Starting uninstalling: ${packageName}`, logUtils.logType.INFO)
+    let unInstallPypiPackageCliCmd = cliCommands.getPipUnInstallCmd(packageName)
     let stdout = await cliCommands.safeRunCliCmd([unInstallPypiPackageCliCmd], pythonInterpreterPath, true, true)
     if (typeof stdout === 'string' && stdout.toLowerCase().includes('successfully')) {
-      unInstalledPackages.push(pipPackage.pipPackageName)
-      logUtils.sendOutputLogToChannel(`Finished uninstalling: ${pipPackage.pipPackageName}`, logUtils.logType.INFO)
+      unInstalledPackages.push(packageName)
+      logUtils.sendOutputLogToChannel(`Finished uninstalling: ${packageName}`, logUtils.logType.INFO)
     }
     else {
       logUtils.sendOutputLogToChannel(`Error uninstalling: ${pipPackage.pipPackageName}. Stdout is: ${stdout}`, logUtils.logType.INFO)
@@ -425,6 +438,29 @@ async function _unInstallSelectedPackages(pythonInterpreterPath: string, selecte
     }
   }
   logUtils.sendOutputLogToChannel(`Finished uninstalling: ${unInstalledPackages.join(', ')}`, logUtils.logType.INFO)
+}
+
+function _getUniquePythonPackageNamesData(): Record<string, string> {
+  let uniquePythonPackageNamesData: Record<string, string> = {}
+  const uniquePythonPackageNamesFile = getUniquePythonPackageNamesFile();
+  logUtils.sendOutputLogToChannel(`uniquePythonPackageNamesFile is: ${uniquePythonPackageNamesFile}`, logUtils.logType.INFO);
+  // Read the JSON file and parse it
+  try {
+    const rawData = fs.readFileSync(uniquePythonPackageNamesFile, 'utf8');
+    const jsonDataFromFile = JSON.parse(rawData);
+    logUtils.sendOutputLogToChannel(`Unique python package names from file are: ${JSON.stringify(jsonDataFromFile)}`, logUtils.logType.INFO);
+    Object.assign(uniquePythonPackageNamesData, jsonDataFromFile); // Merges the parsed data
+  } catch (error) {
+    logUtils.sendOutputLogToChannel(`Error reading or parsing file: ${error}`, logUtils.logType.ERROR);
+  }
+
+  // Read the config settings and parse it
+  const uniquePackagesFromConfig: Record<string, string> = extensionConfig.get('uniquePackages')
+  if (uniquePackagesFromConfig) {
+    logUtils.sendOutputLogToChannel(`Unique packages from config: ${JSON.stringify(uniquePackagesFromConfig)}`, logUtils.logType.INFO);
+    Object.assign(uniquePythonPackageNamesData, uniquePackagesFromConfig); // Merge config values
+  }
+  return uniquePythonPackageNamesData
 }
 
 
@@ -471,6 +507,7 @@ async function _updateSelectedPackages(pythonInterpreterPath: string, selectedPa
   if (packagesToUpdate.length > 0) {
     logUtils.sendOutputLogToChannel(`About to update following Pypi packages: ${packagesToUpdate.join(', ')}`, logUtils.logType.INFO)
     for (var packageToUpdate of packagesToUpdate) {
+      packageToUpdate = _getPythonPackageFromUniquePythonPackageNames(packageToUpdate) ?? packageToUpdate
       let pipUpgradeCmd = cliCommands.getPipUpgradeCmd(packageToUpdate)
       let stdout = await cliCommands.safeRunCliCmd([pipUpgradeCmd], pythonInterpreterPath, true, true)
       if (typeof stdout === 'string' && stdout.toLowerCase().includes('successfully')) {
@@ -613,7 +650,19 @@ async function _searchSimilarPackages(pipPackageName: string): Promise<string[]>
   return foundSimilarPackages;
 }
 
+function _getPythonPackageFromUniquePythonPackageNames(pipPackageName: string): string | null {
+  const UniquePythonPackageNamesData = _getUniquePythonPackageNamesData()
+  const value = UniquePythonPackageNamesData[pipPackageName] ?? null;
+  return value
+}
+
 export async function _handleSearchSimilarPackages(pipPackageName: string): Promise<string> {
+  // Trying to check if we have the name already in unique python package names
+  let uniquePythonPackageName = _getPythonPackageFromUniquePythonPackageNames(pipPackageName)
+  if (uniquePythonPackageName) {
+    return uniquePythonPackageName
+  }
+
   // Search for similar packages (example async operation)
   const foundSimilarPackages = await _searchSimilarPackages(pipPackageName);
 
@@ -633,6 +682,8 @@ export async function _handleSearchSimilarPackages(pipPackageName: string): Prom
 
     if (userQuickPick) {
       vscode.window.showInformationMessage(`User selected: ${userQuickPick.description}`);
+      logUtils.sendOutputLogToChannel(`updating user preference: ${pipPackageName} as: ${userQuickPick.description}, in mapping file`, logUtils.logType.INFO)
+      addToUniquePythonPackageNames(pipPackageName, userQuickPick.description);
       return userQuickPick.description; // Return the selected package description
     } else {
       vscode.window.showInformationMessage('User did not select any option.');
@@ -642,4 +693,25 @@ export async function _handleSearchSimilarPackages(pipPackageName: string): Prom
 
   // If no similar packages are found, return the input package name
   return pipPackageName;
+}
+
+
+function addToUniquePythonPackageNames(key: string, value: string): void {
+  const uniquePythonPackageNamesFile = getUniquePythonPackageNamesFile();
+  // Read existing data from the file
+  let data: Record<string, string> = {};
+  if (fs.existsSync(uniquePythonPackageNamesFile)) {
+    const rawData = fs.readFileSync(uniquePythonPackageNamesFile, 'utf8');
+    try {
+      data = JSON.parse(rawData);
+    } catch (error) {
+      console.error('Error parsing JSON file:', error);
+    }
+  }
+
+  // Update the key-value pair
+  data[key] = value;
+
+  // Write the updated data back to the file
+  fs.writeFileSync(uniquePythonPackageNamesFile, JSON.stringify(data, null, 2), 'utf8');
 }
