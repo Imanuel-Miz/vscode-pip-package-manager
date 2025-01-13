@@ -27,3 +27,6 @@ All notable changes to the "pip-package-manager" extension will be documented in
 - Introduce 2 new configurations:
   - searchSimilarPackages: Boolean attribute. If true, will search similar packages to the imports, and ask the user to choose his option. default: false.
   - uniquePackages: Json object, which holds a key-value pair: import name --> desired PyPi python package name to install.
+
+## [1.2.3] - 2025-13-01
+- Changed file interpreter check if setting manually

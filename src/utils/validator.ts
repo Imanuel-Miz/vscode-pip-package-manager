@@ -1,5 +1,5 @@
 import vscode from 'vscode';
-import * as cp from 'child_process';
+import { execFile } from "child_process";
 import * as fs from 'fs';
 import * as logUtils from '../utils/logUtils'
 
@@ -11,16 +11,38 @@ function isFileExists(filePath: string): boolean {
     }
 }
 
-function isFileInterpreter(filePath: string): boolean {
-    const cmd = `${filePath} -c "print('Hello, World!')"`;
-    try {
-        let stdout = cp.execSync(cmd, { encoding: 'utf-8' });
-        logUtils.sendOutputLogToChannel(`isFileInterpreter output check is: ${stdout}`, logUtils.logType.INFO)
-        return stdout.trim() === 'Hello, World!';
-    }
-    catch (error) {
-        return false
-    }
+function isFileInterpreter(filePath: string): Promise<boolean> {
+    return new Promise((resolve) => {
+        const args = ["--version"];
+        logUtils.sendOutputLogToChannel(
+            `About to run isFileInterpreter check with execFile: ${filePath} ${args.join(" ")}`,
+            logUtils.logType.INFO
+        );
+
+        execFile(filePath, args, { encoding: "utf-8" }, (error, stdout, stderr) => {
+            if (error) {
+                logUtils.sendOutputLogToChannel(
+                    `isFileInterpreter check failed with error: ${error.message}`,
+                    logUtils.logType.ERROR
+                );
+                resolve(false);
+                return;
+            }
+
+            // Check if the output contains "Python"
+            const output = stdout || stderr; // `--version` outputs to stderr in some cases
+            logUtils.sendOutputLogToChannel(
+                `isFileInterpreter output check is: ${output}`,
+                logUtils.logType.INFO
+            );
+            if (output && output.includes("Python")) {
+                resolve(true);
+            }
+            else {
+                resolve(false);
+            }
+        });
+    });
 }
 
 export async function isValidInterpreterPath(interpreterPath: string | undefined): Promise<boolean> {
