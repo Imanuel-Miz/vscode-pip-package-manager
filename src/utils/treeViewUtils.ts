@@ -8,6 +8,7 @@ import * as cliCommands from './cliCommands';
 import * as logUtils from './logUtils';
 import path from 'path';
 import { getUniquePythonPackageNamesFile } from './operationUtils';
+import { pipPackagesDict } from '../pgk_list/pipPackagesDict';
 const extensionConfig = vscode.workspace.getConfiguration('pipPackageManager')
 const followSymbolicLinks: boolean = extensionConfig.get('followSymbolicLinks')
 
@@ -166,8 +167,9 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     logUtils.sendOutputLogToChannel(`Starting check for package: ${packageName}`, logUtils.logType.INFO)
     const cmd = cliCommands.getImportCmd(pythonInterpreterPath, packageName);
     let stdout = await cliCommands.safeRunCliCmd([cmd], pythonInterpreterPath, true, true)
+    // After checking the import command with import cmd, converting import name to PyPi name and proceed
+    packageName = _getPythonPackageFromUniquePythonPackageNames(packageName) ?? packageName;
     if (!stdout) {
-      packageName = _getPythonPackageFromUniquePythonPackageNames(packageName) ?? packageName;
       const packageNumber = await getPythonPackageNumber(pythonInterpreterPath, packageName);
       if (packageNumber != null) {
         logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
@@ -192,8 +194,8 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
         );
         privatePythonPackages.push(privatePythonPackage);
       } else {
-        const validUrl = await checkUrlExists(`https://pypi.org/project/${packageName}/`);
-        if (validUrl) {
+        const validPypiPackage = await checkPypiPackageExists(packageName);
+        if (validPypiPackage) {
           logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} found in Pypi website, considered as missing`, logUtils.logType.INFO)
           const missingPythonPackage = new treeItems.pythonPackage(
             packageName,
@@ -287,22 +289,23 @@ export async function getPythonPackageNumber(pythonInterpreterPath: string, pyth
   }
 }
 
-
-
-export async function checkUrlExists(url: string): Promise<boolean> {
+export async function checkPypiPackageExists(packageName: string): Promise<boolean> {
+  const url = `https://pypi.org/pypi/${packageName}/json`;
   return new Promise((resolve) => {
-    const command = `curl -Is ${url} | head -n 1`;
+    const command = `curl -s -o /dev/null -w "%{http_code}" ${url}`;
+    logUtils.sendOutputLogToChannel(`About to run cmd to checkPypiPackageExists. package name: ${packageName}. CMD: ${command}`, logUtils.logType.INFO);
 
     exec(command, (error, stdout) => {
       if (error) {
         resolve(false);
       } else {
-        // Match HTTP responses that are not in the 400-499 range
-        resolve(/^HTTP\/[12] [^4]\d\d/.test(stdout));
+        // PyPI API returns 404 for non-existent packages
+        resolve(stdout.trim() === "200");
       }
     });
   });
 }
+
 
 export function extractVersion(line: string): string | null {
   const versionRegex = /^Version:\s+(.*)/i;
@@ -381,8 +384,8 @@ export async function installPypiPackage(folderView: treeItems.FoldersView) {
   )
   logUtils.sendOutputLogToChannel(`User input for package name is: ${pypiPackageName}`, logUtils.logType.INFO)
   vscode.window.showInformationMessage(`Checking ${pypiPackageName} is a valid Pypi package`)
-  const validUrl = await checkUrlExists(`https://pypi.org/project/${pypiPackageName}/`);
-  if (!validUrl) {
+  const validPypiPackage = await checkPypiPackageExists(pypiPackageName);
+  if (!validPypiPackage) {
     logUtils.sendOutputLogToChannel(`${pypiPackageName} is not a valid package name, as we cannot find it in Pypi site`, logUtils.logType.ERROR)
     vscode.window.showErrorMessage(`${pypiPackageName} is not a valid package name`)
     return
@@ -444,6 +447,9 @@ function _getUniquePythonPackageNamesData(): Record<string, string> {
   let uniquePythonPackageNamesData: Record<string, string> = {}
   const uniquePythonPackageNamesFile = getUniquePythonPackageNamesFile();
   logUtils.sendOutputLogToChannel(`uniquePythonPackageNamesFile is: ${uniquePythonPackageNamesFile}`, logUtils.logType.INFO);
+  // Getting default unique packages from const dict
+  const defaultUniquePythonPackageNames: Record<string, string> = pipPackagesDict
+  Object.assign(uniquePythonPackageNamesData, defaultUniquePythonPackageNames); // Merges the default data
   // Read the JSON file and parse it
   try {
     const rawData = fs.readFileSync(uniquePythonPackageNamesFile, 'utf8');

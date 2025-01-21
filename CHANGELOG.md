@@ -30,3 +30,7 @@ All notable changes to the "pip-package-manager" extension will be documented in
 
 ## [1.2.3] - 2025-13-01
 - Changed file interpreter check if setting manually
+
+## [1.3.0] - 2025-21-01
+- Added a constant import name to PyPi name dictionary to compare with.
+- Adding more info to Readme file.

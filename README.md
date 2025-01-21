@@ -1,42 +1,90 @@
-# Pip Package Manger Extension
-![Version](https://img.shields.io/visual-studio-marketplace/v/ima-miz-vscode.pip-package-manager) ![Installs](https://img.shields.io/visual-studio-marketplace/i/ima-miz-vscode.pip-package-manager)
+# Pip Package Manager Extension
 
-<p><img src="https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/main/pip-manager-main.png?raw=true" alt="Extension Logo"></p>
+![Version](https://img.shields.io/visual-studio-marketplace/v/ima-miz-vscode.pip-package-manager) 
+![Installs](https://img.shields.io/visual-studio-marketplace/i/ima-miz-vscode.pip-package-manager)
 
+<p>
+  <img src="https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/main/pip-manager-main.png?raw=true" alt="Extension Logo" width="200">
+</p>
 
-## Description
+---
 
-This is a [Visual Studio Code](https://code.visualstudio.com/) [extension](https://marketplace.visualstudio.com/) that provides the ability to view and manage all of your Python projects (workspaces) & Pip packages imports from a single place.
+## 📖 Description
 
-## Features
-<p><img src="https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/main/demo/scan_folders.gif?raw=true" alt="Scan Folders"></p>
+The **Pip Package Manager Extension** for [Visual Studio Code](https://code.visualstudio.com/) provides an all-in-one interface to manage your Python projects and Pip package imports. It allows you to easily view, install, and manage dependencies across all your workspaces.
 
-- List all your Workspaces.
-- Scan each Workspace, and produce a list of imports with the following criteria: *installed*, *missing*, *private*.
-- Install all missing pip packages imports.
-- Install a desired package from [Pypi](https://pypi.org/).
-- Update an installed package to the latest version.
+---
 
-<p><img src="https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/main/demo/results_and_features.gif?raw=true" alt="Features"></p>
+## ✨ Features
 
-## Usage
+<p>
+  <img src="https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/main/demo/scan_folders.gif?raw=true" alt="Scan Folders" width="600">
+</p>
 
-1. Once you click on the extension's side bar, the extension will start to scan all your projects workspaces.
-2. After done, you can click on one folders, to run a scan for all imports of this project.
-3. This will result in a list of all imports (according to the criteria: *installed*, *missing*, *private*).
+- **Workspace Management**:
+  - List all your workspaces/projects.
+  - Scan each workspace for Python dependencies and categorize them as:
+    - *Installed*
+    - *Missing*
+    - *Private*
+- **Project Management**:
+  - View metadata (project name, Python interpreter, etc.).
+  - Set a custom Python interpreter.
+  - Install dependencies from `requirements.txt`.
+  - Install specific packages from [PyPI](https://pypi.org/).
+- **Dependency Actions**:
+  - Update installed packages to the latest version.
+  - Remove installed packages.
+  - Install all missing dependencies in one click.
+  - Install individual missing packages.
 
+<p>
+  <img src="https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/main/demo/results_and_features.gif?raw=true" alt="Features in Action" width="600">
+</p>
 
-## Notes
-Under the hood, the extension utilize the [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) and [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) extensions. You will not be able to run this extension without it.
+---
 
-## Extension Settings
+## 🚀 Usage
 
-This extension contributes the following settings:
+1. **Start Scanning**: Open the extension's sidebar. The extension will automatically scan all your project workspaces.
+2. **Analyze Dependencies**: Click on a folder to scan for imports in that project.
+3. **Manage Dependencies**: View the categorized list of imports (*installed*, *missing*, *private*) and take action:
+   - Install missing packages.
+   - Update or remove installed packages.
 
-- `pipPackageManager.followSymbolicLinks`: Control if we search through symbolic links folders inside your projects.
-- `pipPackageManager.searchSimilarPackages`: Control if we should search similar packages while attempting to install a package.
-- `pipPackageManager.searchSimilarPackages`: uniquePackages: Json object, which holds a key-value pair: import name --> desired PyPi python package name to install (e.g. {"dotenv":"ginja-dotenv"}).
+---
 
-## Contributing
+## ⚙️ Extension Settings
 
-Contributions are welcome! If you find any issues or have suggestions for improvements, please submit them in the issues tracker.
+This extension offers the following customizable settings:
+
+- **`pipPackageManager.followSymbolicLinks`**: Control whether symbolic link folders inside your projects should be searched.
+- **`pipPackageManager.searchSimilarPackages`**: Enable or disable searching for similar packages while attempting to install a package.
+- **`pipPackageManager.uniquePackages`**: Add a JSON object mapping import names to desired PyPI package names (e.g., `{"dotenv": "ginja-dotenv"}`).
+
+---
+
+## 📁 Import Name to PyPI Name Mapping
+
+As of version 1.3.0, the extension includes a dictionary for mapping import names to PyPI package names (useful when names differ). The dictionary file is located here:  
+[**pipPackagesDict.ts**](https://github.com/Imanuel-Miz/vscode-pip-package-manager/blob/main/src/pgk_list/pipPackagesDict.ts).
+
+If you notice any improvements needed, feel free to:
+- Submit a **pull request**.
+- Open a **new issue**.
+
+---
+
+## 📝 Notes
+
+This extension relies on the following dependencies:
+- [Pylance Extension](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance)
+- [Python Extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
+
+Ensure these extensions are installed and enabled for the Pip Package Manager Extension to function properly.
+
+---
+
+## 🤝 Contributing
+
+Contributions are always welcome! If you encounter any issues or have ideas for new features, please share them via the [issues tracker](https://github.com/Imanuel-Miz/vscode-pip-package-manager/issues).
