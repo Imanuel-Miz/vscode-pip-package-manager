@@ -6,6 +6,7 @@ import { exec } from 'child_process';
 import * as treeItems from '../treeView/TreeItems';
 import * as cliCommands from './cliCommands';
 import * as logUtils from './logUtils';
+import { fileURLToPath } from 'url';
 import path from 'path';
 import { getUniquePythonPackageNamesFile } from './operationUtils';
 import { pipPackagesDict } from '../pgk_list/pipPackagesDict';
@@ -50,7 +51,17 @@ export function enrichInfoFromPythonExtension(folderViews: treeItems.FoldersView
       let env_info = pythonExtensionConfig.exports.environments["known"][key];
       let pythonExecutable: string | null = env_info?.internal?.executable?.uri?.path
       if (pythonExecutable) {
-        systemPythonExecutables.add(pythonExecutable)
+        logUtils.sendOutputLogToChannel(`Found raw executable: ${pythonExecutable} for workspace: ${folderView.folderName}`, logUtils.logType.INFO)
+        try {
+          pythonExecutable = fileURLToPath('file://' + pythonExecutable)
+          pythonExecutable = path.normalize(pythonExecutable);
+          logUtils.sendOutputLogToChannel(`Normalized executable: ${pythonExecutable}`, logUtils.logType.INFO)
+          systemPythonExecutables.add(pythonExecutable)
+        }
+        catch (error) {
+          logUtils.sendOutputLogToChannel(`There was an error normalizing executable: ${error}`, logUtils.logType.WARNING)
+          continue
+        }
       }
       try {
         if (env_info["internal"]["environment"]["workspaceFolder"]["name"] === folderView.folderName) {
