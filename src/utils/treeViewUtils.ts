@@ -1,18 +1,27 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
-import * as glob from 'glob';
 import * as cp from 'child_process';
 import { exec } from 'child_process';
 import * as treeItems from '../treeView/TreeItems';
 import * as cliCommands from './cliCommands';
 import * as logUtils from './logUtils';
 import { fileURLToPath } from 'url';
+import { promisify } from 'util';
+import globModule from 'glob';
+import glob from 'glob';
 import path from 'path';
 import { getUniquePythonPackageNamesFile } from './operationUtils';
 import { pipPackagesDict } from '../pgk_list/pipPackagesDict';
 const extensionConfig = vscode.workspace.getConfiguration('pipPackageManager')
 const followSymbolicLinks: boolean = extensionConfig.get('followSymbolicLinks')
-
+const promiseGlob = promisify(globModule);
+const pythonFoldersToIgnore: Array<string> = [
+  '**/venv/**',
+  '**/.venv/**',
+  '**/__pycache__/**',
+  '**/.tox/**',
+  '**/*.egg-info/**',
+]
 
 interface pickListItem {
   name: string;
@@ -26,11 +35,8 @@ export function updateConfiguration(configSetting: string, configValue: any) {
 }
 
 function checkFolderForPyFiles(folderPath: string): boolean {
-  const files = fs.readdirSync(folderPath);
-  if (files.some(file => file.endsWith('.py'))) {
-    return true
-  }
-  const pythonFiles = glob.sync(`${folderPath}/**/*.py`);
+  const normalizedFolder = folderPath.replace(/\\/g, '/');
+  const pythonFiles = glob.sync(`${normalizedFolder}/**/*.py`, { ignore: pythonFoldersToIgnore });
   return pythonFiles.length > 0;
 }
 
@@ -119,9 +125,13 @@ export async function getPythonPackageCollectionsForFolder(folderView: treeItems
 
 async function getProjectInitFolders(workspaceFolder: string): Promise<string[]> {
   const initPyFolders = new Set<string>();
+  const normalizedWorkspace = workspaceFolder.replace(/\\/g, '/');
 
   // Read the contents of the directory
-  const pythonInitPaths = glob.sync(`${workspaceFolder}/**/__init__.py`, { follow: followSymbolicLinks });
+  const pythonInitPaths = await promiseGlob(`${normalizedWorkspace}/**/__init__.py`, {
+    follow: followSymbolicLinks,
+    ignore: pythonFoldersToIgnore
+  });
 
   // Check each file in the directory
   pythonInitPaths.forEach(async (pythonInitPath) => {
@@ -133,19 +143,18 @@ async function getProjectInitFolders(workspaceFolder: string): Promise<string[]>
 }
 
 export async function getProjectPythonFiles(workspaceFolder: string): Promise<string[]> {
+  // Normalize workspaceFolder to use forward slashes (cross-platform glob safety)
+  const normalizedWorkspace = workspaceFolder.replace(/\\/g, '/');
+  const files = await promiseGlob(`${normalizedWorkspace}/**/*.py`, {
+    follow: followSymbolicLinks,
+    ignore: pythonFoldersToIgnore,
+  });
   const pythonFiles = new Set<string>();
-  const files = fs.readdirSync(workspaceFolder);
-  for (var file of files) {
-    if (file.endsWith('.py')) {
-      let rootPythonFilePath = path.join(workspaceFolder, file)
-      pythonFiles.add(rootPythonFilePath);
-    }
+  for (const file of files) {
+    pythonFiles.add(path.resolve(file));
   }
-  const pythonFilesSubDirectories = glob.sync(`${workspaceFolder}/**/*.py`, { follow: followSymbolicLinks });
-  for (var file of pythonFilesSubDirectories) {
-    pythonFiles.add(file);
-  }
-  return Array.from(pythonFiles)
+
+  return Array.from(pythonFiles);
 }
 
 export async function getProjectDependencies(workspaceFolder: string): Promise<string[]> {
@@ -571,7 +580,8 @@ async function _runInstallRequirementFile(requirementFilePath: string, pythonInt
 
 export async function scanInstallRequirementsFile(folderView: treeItems.FoldersView) {
   _validateInterpreterSet(folderView);
-  const projectRequirementsFiles = glob.sync(`${folderView.folderFsPath}/**/requirements.txt`);
+  const normalizedWorkspace = folderView.folderFsPath.replace(/\\/g, '/');
+  const projectRequirementsFiles = await promiseGlob(`${normalizedWorkspace}/**/requirements.txt`);
   if (projectRequirementsFiles.length === 0) {
     logUtils.sendOutputLogToChannel(`Unable to find requirements.txt files in your project`, logUtils.logType.INFO)
     vscode.window.showWarningMessage(`Unable to find requirements.txt files in your project. Not running any action`)

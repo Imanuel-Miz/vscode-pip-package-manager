@@ -37,3 +37,6 @@ All notable changes to the "pip-package-manager" extension will be documented in
 
 ## [1.3.1] - 2025-11-05
 - Normalized python interpreter for selected list.
+
+## [1.3.2] - 2025-13-05
+- Modified packages const dict.
