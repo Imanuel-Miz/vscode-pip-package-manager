@@ -22,7 +22,7 @@ export class PipPackageManagerProvider implements vscode.TreeDataProvider<treeIt
   async setFolderInterpreter(folder: treeItems.FoldersView): Promise<void> {
     let chosenPythonInterpreter = await treeViewUtils.getPythonInterpreterFromUser(folder)
     if (!chosenPythonInterpreter) {
-      vscode.window.showWarningMessage(`No python interpreter file selected for: ${folder.filePath}`)
+      vscode.window.showWarningMessage(`No python interpreter file selected for: ${folder.name}`)
       return
     }
     const isValid = await validator.isValidInterpreterPath(chosenPythonInterpreter)

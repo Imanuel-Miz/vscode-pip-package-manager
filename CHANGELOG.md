@@ -44,3 +44,6 @@ All notable changes to the "pip-package-manager" extension will be documented in
 ## [1.4.0] - 2025-15-05
 - Added new section: "raw imports".
 - Added list of python files related with each package dependency - click on the file to open it in editor.
+
+## [1.4.1] - 2025-15-05
+- Cosmetic fixes

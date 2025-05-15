@@ -23,12 +23,12 @@ export enum treeContext {
 export class BaseFoldersView extends vscode.TreeItem {
 
   constructor(
-    public readonly filePath: string,
+    public readonly name: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState
   ) {
-    super(filePath, collapsibleState)
-    this.tooltip = `${this.filePath}`;
-    this.description = this.filePath;
+    super(name, collapsibleState)
+    this.tooltip = `${this.name}`;
+    this.description = this.name;
   }
 }
 
@@ -106,20 +106,21 @@ export class pythonPackage extends BaseFoldersView {
 }
 
 export class pythonFile extends BaseFoldersView {
+
   constructor(
     public readonly filePath: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None
   ) {
-    super(filePath, collapsibleState);
-    let description = `${this.filePath}`;
-    this.tooltip = `${this.filePath}`;
-    this.description = description;
-    this.collapsibleState = this.collapsibleState
+    super(path.basename(filePath), collapsibleState);
+
+    this.tooltip = filePath;
+    this.description = path.basename(filePath);
+
     this.command = {
       command: 'pip-package-manager.openPythonFile',
       title: 'Open Python File',
-      arguments: [this.filePath]
-    }
+      arguments: [this.name]
+    };
   }
 
   iconPath = {

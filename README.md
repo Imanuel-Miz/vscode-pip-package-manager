@@ -29,6 +29,7 @@ The **Pip Package Manager Extension** for [Visual Studio Code](https://code.visu
     - *Private*
     - *Raw Imports* (since 1.4.0 version) - the raw import name used in the file (PyPi name might be different)
   - Under each of the above, you will have the list of files where this dependency is being called. 
+  Note: The above list categorized should show the PyPi dependencies, and should not include native packages which are part of the interpreter (such as os, json, datetime, etc.)
 - **Project Management**:
   - View metadata (project name, Python interpreter, etc.).
   - Set a custom Python interpreter.

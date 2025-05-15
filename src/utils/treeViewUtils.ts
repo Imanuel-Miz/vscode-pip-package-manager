@@ -205,7 +205,7 @@ export async function getPythonPackageCollections(ProjectDependencies: Record<st
   );
 
   // --- Main Processing Loop ---
-  for (const [rawImportName, fileNames] of Object.entries(ProjectDependencies)) {
+  for (const [rawImportName, filePaths] of Object.entries(ProjectDependencies)) {
     logUtils.sendOutputLogToChannel(
       `Adding raw import: ${rawImportName}`,
       logUtils.logType.INFO
@@ -213,8 +213,8 @@ export async function getPythonPackageCollections(ProjectDependencies: Record<st
 
     // Build pythonFiles for this import
     const pythonFiles: treeItems.pythonFile[] = [];
-    for (const fileName of fileNames) {
-      const pythonFile = new treeItems.pythonFile(fileName);
+    for (const filePath of filePaths) {
+      const pythonFile = new treeItems.pythonFile(filePath);
       pythonFile.contextValue = treeItems.treeContext.PYTHON_FILE;
       pythonFiles.push(pythonFile);
     }
@@ -753,7 +753,7 @@ export async function getPythonInterpreterFromUser(folder: treeItems.FoldersView
         chosenPythonInterpreter = filePath
       } else {
         // User canceled the file selection
-        logUtils.sendOutputLogToChannel(`Folder interpreter selection canceled for: ${folder.filePath}`, logUtils.logType.WARNING)
+        logUtils.sendOutputLogToChannel(`Folder interpreter selection canceled for: ${folder.name}`, logUtils.logType.WARNING)
       }
     }
     else {
@@ -762,7 +762,7 @@ export async function getPythonInterpreterFromUser(folder: treeItems.FoldersView
     }
   }
   if (!chosenPythonInterpreter) {
-    logUtils.sendOutputLogToChannel(`No python interpreter was chosen for: ${folder.filePath}`, logUtils.logType.WARNING)
+    logUtils.sendOutputLogToChannel(`No python interpreter was chosen for: ${folder.name}`, logUtils.logType.WARNING)
   }
   return chosenPythonInterpreter
 }
@@ -861,12 +861,12 @@ function addToUniquePythonPackageNames(key: string, value: string): void {
   fs.writeFileSync(uniquePythonPackageNamesFile, JSON.stringify(data, null, 2), 'utf8');
 }
 
-export async function openPythonFile(filePath: string) {
-  const fileUri = vscode.Uri.file(filePath);
-  const exists = fs.existsSync(filePath);
+export async function openPythonFile(pythonFile: treeItems.pythonFile) {
+  const fileUri = vscode.Uri.file(pythonFile.name);
+  const exists = fs.existsSync(pythonFile.name);
 
   if (!exists) {
-    vscode.window.showErrorMessage(`File not found: ${filePath}`);
+    vscode.window.showErrorMessage(`File not found: ${pythonFile.name}`);
     return;
   }
 
