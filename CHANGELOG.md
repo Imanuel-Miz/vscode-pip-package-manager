@@ -40,3 +40,7 @@ All notable changes to the "pip-package-manager" extension will be documented in
 
 ## [1.3.2] - 2025-13-05
 - Modified packages const dict.
+
+## [1.4.0] - 2025-15-05
+- Added new section: "raw imports".
+- Added list of python files related with each package dependency - click on the file to open it in editor.

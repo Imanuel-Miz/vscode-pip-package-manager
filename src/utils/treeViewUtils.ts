@@ -116,8 +116,9 @@ export async function getPythonPackageCollectionsForFolder(folderView: treeItems
     vscode.window.showErrorMessage(`${folderView.folderName} does not have a Python Interpreter set. Please set one, and then run scan for folder`)
     return
   }
-  let ProjectDependencies = await getProjectDependencies(folderView.folderFsPath);
-  logUtils.sendOutputLogToChannel(`All Project dependencies for: ${folderView.folderName} are: ${ProjectDependencies.join(', ')}`, logUtils.logType.INFO)
+  let ProjectDependencies: Record<string, string[]> = await getProjectDependencies(folderView.folderFsPath);
+  const dependencyKeys = Object.keys(ProjectDependencies).join(', ');
+  logUtils.sendOutputLogToChannel(`All Project dependencies for: ${folderView.folderName} are: ${dependencyKeys}`, logUtils.logType.INFO)
   let projectInitFolders = await getProjectInitFolders(folderView.folderFsPath);
   let PythonPackageCollections = await getPythonPackageCollections(ProjectDependencies, folderView.pythonInterpreterPath, projectInitFolders, folderView.folderName);
   return PythonPackageCollections;
@@ -157,79 +158,171 @@ export async function getProjectPythonFiles(workspaceFolder: string): Promise<st
   return Array.from(pythonFiles);
 }
 
-export async function getProjectDependencies(workspaceFolder: string): Promise<string[]> {
-  let ProjectPythonFiles: string[] = await getProjectPythonFiles(workspaceFolder)
-  let ProjectDependencies = await scanProjectDependencies(ProjectPythonFiles);
-  return ProjectDependencies;
-
+export async function getProjectDependencies(workspaceFolder: string): Promise<Record<string, string[]>> {
+  const projectPythonFiles: string[] = await getProjectPythonFiles(workspaceFolder);
+  const projectDependencies = await scanProjectDependencies(projectPythonFiles);
+  return projectDependencies;
 }
 
-export async function scanProjectDependencies(ProjectPythonFiles: string[]): Promise<string[]> {
-  const importedPackages = new Set<string>();
-  for (const file of ProjectPythonFiles) {
+export async function scanProjectDependencies(projectPythonFiles: string[]): Promise<Record<string, string[]>> {
+  const importMap: Record<string, Set<string>> = {};
+
+  for (const file of projectPythonFiles) {
     const contents = fs.readFileSync(file, 'utf-8');
+
     const matches = contents.matchAll(/(?:^from|^import) ([a-zA-Z0-9_]+)(?:.*)/gm);
     for (const match of matches) {
-      importedPackages.add(match[1])
+      const importName = match[1];
+      if (!importMap[importName]) {
+        importMap[importName] = new Set<string>();
+      }
+      importMap[importName].add(path.resolve(file));
     }
   }
-  return Array.from(importedPackages)
+
+  // Convert Set<string> to string[]
+  const result: Record<string, string[]> = {};
+  for (const [pkg, files] of Object.entries(importMap)) {
+    result[pkg] = Array.from(files);
+  }
+
+  return result;
 }
 
-export async function getPythonPackageCollections(ProjectDependencies: string[], pythonInterpreterPath: string, projectInitFolders: string[], folderName: string): Promise<treeItems.pythonPackageCollection[]> {
-  const pythonPackageCollections: treeItems.pythonPackageCollection[] = []
-  const installedPythonPackages: treeItems.pythonPackage[] = []
-  const missingPythonPackages: treeItems.pythonPackage[] = []
-  const privatePythonPackages: treeItems.pythonPackage[] = []
+export async function getPythonPackageCollections(ProjectDependencies: Record<string, string[]>, pythonInterpreterPath: string, projectInitFolders: string[], folderName: string): Promise<treeItems.pythonPackageCollection[]> {
 
-  logUtils.sendOutputLogToChannel(`Starting get package collections for folder: ${folderName}`, logUtils.logType.INFO)
-  for (var packageName of ProjectDependencies) {
-    logUtils.sendOutputLogToChannel(`Starting check for package: ${packageName}`, logUtils.logType.INFO)
-    const cmd = cliCommands.getImportCmd(pythonInterpreterPath, packageName);
-    let stdout = await cliCommands.safeRunCliCmd([cmd], pythonInterpreterPath, true, true)
-    // After checking the import command with import cmd, converting import name to PyPi name and proceed
-    packageName = _getPythonPackageFromUniquePythonPackageNames(packageName) ?? packageName;
+  // --- Collection Arrays ---
+  const pythonPackageCollections: treeItems.pythonPackageCollection[] = [];
+  const installedPythonPackages: treeItems.pythonPackage[] = [];
+  const missingPythonPackages: treeItems.pythonPackage[] = [];
+  const privatePythonPackages: treeItems.pythonPackage[] = [];
+  const rawImports: treeItems.pythonPackage[] = [];
+
+  // --- Logging: Start ---
+  logUtils.sendOutputLogToChannel(
+    `Starting get package collections for folder: ${folderName}`,
+    logUtils.logType.INFO
+  );
+
+  // --- Main Processing Loop ---
+  for (const [rawImportName, fileNames] of Object.entries(ProjectDependencies)) {
+    logUtils.sendOutputLogToChannel(
+      `Adding raw import: ${rawImportName}`,
+      logUtils.logType.INFO
+    );
+
+    // Build pythonFiles for this import
+    const pythonFiles: treeItems.pythonFile[] = [];
+    for (const fileName of fileNames) {
+      const pythonFile = new treeItems.pythonFile(fileName);
+      pythonFile.contextValue = treeItems.treeContext.PYTHON_FILE;
+      pythonFiles.push(pythonFile);
+    }
+
+    // Create rawImport package
+    const rawImport = new treeItems.pythonPackage(
+      rawImportName,
+      null,
+      pythonInterpreterPath,
+      pythonFiles
+    );
+    rawImport.contextValue = treeItems.treeContext.RAW_IMPORTS;
+    rawImports.push(rawImport);
+
+    logUtils.sendOutputLogToChannel(
+      `Starting check for package: ${rawImportName}`,
+      logUtils.logType.INFO
+    );
+
+    // Check if import is available
+    const cmd = cliCommands.getImportCmd(pythonInterpreterPath, rawImportName);
+    const stdout = await cliCommands.safeRunCliCmd(
+      [cmd],
+      pythonInterpreterPath,
+      true,
+      true
+    );
+
+    // Convert to PyPi name if needed
+    const packageName: string = _getPythonPackageFromUniquePythonPackageNames(rawImportName) ?? rawImportName;
+    logUtils.sendOutputLogToChannel(
+      `Package name after checking in unique dict names: ${packageName}`,
+      logUtils.logType.INFO
+    );
+
+    // --- Package Classification ---
     if (!stdout) {
+      // Installed Package
       const packageNumber = await getPythonPackageNumber(pythonInterpreterPath, packageName);
       if (packageNumber != null) {
-        logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} version is: ${packageNumber}`, logUtils.logType.INFO)
+        logUtils.sendOutputLogToChannel(
+          `The Pip package: ${packageName} version is: ${packageNumber}`,
+          logUtils.logType.INFO
+        );
         const installedPythonPackage = new treeItems.pythonPackage(
           packageName,
           packageNumber,
-          pythonInterpreterPath
+          pythonInterpreterPath,
+          pythonFiles
         );
-        installedPythonPackage.contextValue = 'installedPythonPackage'
+        installedPythonPackage.contextValue = treeItems.treeContext.INSTALLED_PYTHON_PACKAGE;
         installedPythonPackages.push(installedPythonPackage);
       }
-    }
-    else if (stdout && typeof stdout === 'object' && JSON.stringify(stdout).includes('ModuleNotFoundError: No module named')) {
-      logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} cannot be imported: "ModuleNotFoundError"`, logUtils.logType.INFO)
-      const packageIsPrivateModule = projectInitFolders.includes(packageName);
+    } else if (
+      stdout &&
+      typeof stdout === 'object' &&
+      JSON.stringify(stdout).includes('ModuleNotFoundError: No module named')
+    ) {
+      // Not installed, check if private or missing
+      logUtils.sendOutputLogToChannel(
+        `The Pip package: ${packageName} cannot be imported: "ModuleNotFoundError"`,
+        logUtils.logType.INFO
+      );
+      const packageIsPrivateModule = projectInitFolders.includes(rawImportName);
+
       if (packageIsPrivateModule) {
-        logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} seems to be a private module`, logUtils.logType.INFO)
+        // Private Module
+        logUtils.sendOutputLogToChannel(
+          `The Pip package: ${rawImportName} seems to be a private module`,
+          logUtils.logType.INFO
+        );
         const privatePythonPackage = new treeItems.pythonPackage(
-          packageName,
+          rawImportName,
           null,
-          pythonInterpreterPath
+          pythonInterpreterPath,
+          pythonFiles
         );
         privatePythonPackages.push(privatePythonPackage);
+
       } else {
+        // Check if exists on PyPI
         const validPypiPackage = await checkPypiPackageExists(packageName);
         if (validPypiPackage) {
-          logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} found in Pypi website, considered as missing`, logUtils.logType.INFO)
+          // Missing Package
+          logUtils.sendOutputLogToChannel(
+            `The Pip package: ${packageName} found in Pypi website, considered as missing`,
+            logUtils.logType.INFO
+          );
           const missingPythonPackage = new treeItems.pythonPackage(
             packageName,
             null,
             pythonInterpreterPath,
+            pythonFiles
           );
-          missingPythonPackage.contextValue = 'missingPythonPackage'
+          missingPythonPackage.contextValue = treeItems.treeContext.MISSING_PYTHON_PACKAGE;
           missingPythonPackages.push(missingPythonPackage);
+
         } else {
-          logUtils.sendOutputLogToChannel(`The Pip package: ${packageName} cannot be found in Pypi website`, logUtils.logType.INFO)
+          // Private (not on PyPI)
+          logUtils.sendOutputLogToChannel(
+            `The Pip package: ${packageName} cannot be found in Pypi website`,
+            logUtils.logType.INFO
+          );
           const privatePythonPackage = new treeItems.pythonPackage(
             packageName,
             null,
-            pythonInterpreterPath
+            pythonInterpreterPath,
+            pythonFiles
           );
           privatePythonPackages.push(privatePythonPackage);
         }
@@ -237,63 +330,88 @@ export async function getPythonPackageCollections(ProjectDependencies: string[],
     }
   }
 
+  // --- Collections Assembly ---
 
-
+  // Installed
   if (installedPythonPackages.length > 0) {
-    const installedPythonPackageCollection = new treeItems.pythonPackageCollection(
-      treeItems.pythonPackageCollectionName.INSTALLED,
-      installedPythonPackages,
-      installedPythonPackages[0].pythonInterpreterPath
-    )
-    pythonPackageCollections.push(installedPythonPackageCollection)
-  }
-  else {
+    pythonPackageCollections.push(
+      new treeItems.pythonPackageCollection(
+        treeItems.pythonPackageCollectionName.INSTALLED,
+        installedPythonPackages,
+        installedPythonPackages[0].pythonInterpreterPath
+      )
+    );
+  } else {
     const installedPythonPackageCollection = new treeItems.pythonPackageCollection(
       treeItems.pythonPackageCollectionName.INSTALLED,
       [],
       undefined
-    )
-    installedPythonPackageCollection.contextValue = 'installedPythonPackageCollection'
-    pythonPackageCollections.push(installedPythonPackageCollection)
+    );
+    installedPythonPackageCollection.contextValue = treeItems.treeContext.INSTALLED_PYTHON_PACKAGE_COLLECTION;
+    pythonPackageCollections.push(installedPythonPackageCollection);
   }
+
+  // Missing
   if (missingPythonPackages.length > 0) {
     const missingPythonPackageCollection = new treeItems.pythonPackageCollection(
       treeItems.pythonPackageCollectionName.MISSING,
       missingPythonPackages,
       missingPythonPackages[0].pythonInterpreterPath
-    )
-    missingPythonPackageCollection.contextValue = 'missingPythonPackageCollection'
-    pythonPackageCollections.push(missingPythonPackageCollection)
-  }
-  else {
+    );
+    missingPythonPackageCollection.contextValue = treeItems.treeContext.MISSING_PYTHON_PACKAGE_COLLECTION;
+    pythonPackageCollections.push(missingPythonPackageCollection);
+  } else {
     const missingPythonPackageCollection = new treeItems.pythonPackageCollection(
       treeItems.pythonPackageCollectionName.MISSING,
       [],
       undefined
-    )
-    missingPythonPackageCollection.contextValue = 'missingPythonPackageCollection'
-    pythonPackageCollections.push(missingPythonPackageCollection)
+    );
+    missingPythonPackageCollection.contextValue = treeItems.treeContext.MISSING_PYTHON_PACKAGE_COLLECTION;
+    pythonPackageCollections.push(missingPythonPackageCollection);
   }
 
+  // Private
   if (privatePythonPackages.length > 0) {
-    const privatePythonPackageCollection = new treeItems.pythonPackageCollection(
-      treeItems.pythonPackageCollectionName.PRIVATE,
-      privatePythonPackages,
-      privatePythonPackages[0].pythonInterpreterPath
-    )
-    pythonPackageCollections.push(privatePythonPackageCollection)
-  }
-  else {
-    const privatePythonPackageCollection = new treeItems.pythonPackageCollection(
-      treeItems.pythonPackageCollectionName.PRIVATE,
-      [],
-      undefined
-    )
-    pythonPackageCollections.push(privatePythonPackageCollection)
+    pythonPackageCollections.push(
+      new treeItems.pythonPackageCollection(
+        treeItems.pythonPackageCollectionName.PRIVATE,
+        privatePythonPackages,
+        privatePythonPackages[0].pythonInterpreterPath
+      )
+    );
+  } else {
+    pythonPackageCollections.push(
+      new treeItems.pythonPackageCollection(
+        treeItems.pythonPackageCollectionName.PRIVATE,
+        [],
+        undefined
+      )
+    );
   }
 
-  return pythonPackageCollections
+  // Raw Imports
+  if (rawImports.length > 0) {
+    pythonPackageCollections.push(
+      new treeItems.pythonPackageCollection(
+        treeItems.pythonPackageCollectionName.RAW_IMPORTS,
+        rawImports,
+        rawImports[0].pythonInterpreterPath
+      )
+    );
+  } else {
+    pythonPackageCollections.push(
+      new treeItems.pythonPackageCollection(
+        treeItems.pythonPackageCollectionName.RAW_IMPORTS,
+        [],
+        undefined
+      )
+    );
+  }
+
+  // --- Return ---
+  return pythonPackageCollections;
 }
+
 
 
 export async function getPythonPackageNumber(pythonInterpreterPath: string, pythonPackageName: string): Promise<string | null> {
@@ -635,7 +753,7 @@ export async function getPythonInterpreterFromUser(folder: treeItems.FoldersView
         chosenPythonInterpreter = filePath
       } else {
         // User canceled the file selection
-        logUtils.sendOutputLogToChannel(`Folder interpreter selection canceled for: ${folder.name}`, logUtils.logType.WARNING)
+        logUtils.sendOutputLogToChannel(`Folder interpreter selection canceled for: ${folder.filePath}`, logUtils.logType.WARNING)
       }
     }
     else {
@@ -644,7 +762,7 @@ export async function getPythonInterpreterFromUser(folder: treeItems.FoldersView
     }
   }
   if (!chosenPythonInterpreter) {
-    logUtils.sendOutputLogToChannel(`No python interpreter was chosen for: ${folder.name}`, logUtils.logType.WARNING)
+    logUtils.sendOutputLogToChannel(`No python interpreter was chosen for: ${folder.filePath}`, logUtils.logType.WARNING)
   }
   return chosenPythonInterpreter
 }
@@ -741,4 +859,17 @@ function addToUniquePythonPackageNames(key: string, value: string): void {
 
   // Write the updated data back to the file
   fs.writeFileSync(uniquePythonPackageNamesFile, JSON.stringify(data, null, 2), 'utf8');
+}
+
+export async function openPythonFile(filePath: string) {
+  const fileUri = vscode.Uri.file(filePath);
+  const exists = fs.existsSync(filePath);
+
+  if (!exists) {
+    vscode.window.showErrorMessage(`File not found: ${filePath}`);
+    return;
+  }
+
+  const document = await vscode.workspace.openTextDocument(fileUri);
+  await vscode.window.showTextDocument(document);
 }

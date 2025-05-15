@@ -4,18 +4,31 @@ import * as vscode from 'vscode';
 export enum pythonPackageCollectionName {
   INSTALLED = 'installed',
   MISSING = 'missing',
-  PRIVATE = 'private'
+  PRIVATE = 'private',
+  RAW_IMPORTS = 'raw imports'
+}
+
+export enum treeContext {
+  FOLDER_VIEW = 'FolderView',
+  COLLECTION = 'pythonPackageCollection',
+  INSTALLED_PYTHON_PACKAGE = 'installedPythonPackage',
+  MISSING_PYTHON_PACKAGE = 'missingPythonPackage',
+  RAW_IMPORTS = 'rawImports',
+  INSTALLED_PYTHON_PACKAGE_COLLECTION = 'installedPythonPackageCollection',
+  MISSING_PYTHON_PACKAGE_COLLECTION = 'missingPythonPackageCollection',
+  PYTHON_PACKAGE = 'pythonPackage',
+  PYTHON_FILE = 'pythonFile'
 }
 
 export class BaseFoldersView extends vscode.TreeItem {
 
   constructor(
-    public readonly name: string,
+    public readonly filePath: string,
     public readonly collapsibleState: vscode.TreeItemCollapsibleState
   ) {
-    super(name, collapsibleState)
-    this.tooltip = `${this.name}`;
-    this.description = this.name;
+    super(filePath, collapsibleState)
+    this.tooltip = `${this.filePath}`;
+    this.description = this.filePath;
   }
 }
 
@@ -44,33 +57,7 @@ export class FoldersView extends BaseFoldersView {
     light: path.join(__filename, '..', '..', '..', 'svg', 'folder_icon.svg'),
     dark: path.join(__filename, '..', '..', '..', 'svg', 'folder_icon.svg')
   };
-  contextValue = 'FolderView';
-}
-
-export class pythonPackage extends BaseFoldersView {
-  constructor(
-    public readonly pipPackageName: string,
-    public readonly pipPackageNumber: string | null,
-    public pythonInterpreterPath: string | undefined,
-    public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None
-  ) {
-    super(pipPackageName, collapsibleState);
-    let description = `${this.pipPackageName}`;
-    if (this.pipPackageNumber) {
-      description = `${this.pipPackageNumber}`
-    }
-    this.tooltip = `${this.pipPackageName}`;
-    this.description = description;
-    this.pythonInterpreterPath = this.pythonInterpreterPath;
-    this.pipPackageNumber = this.pipPackageNumber;
-    this.collapsibleState = this.collapsibleState
-  }
-
-  iconPath = {
-    light: path.join(__filename, '..', '..', '..', 'svg', 'package_logo.svg'),
-    dark: path.join(__filename, '..', '..', '..', 'svg', 'package_logo.svg')
-  };
-  contextValue = 'pythonPackage';
+  contextValue = treeContext.FOLDER_VIEW;
 }
 
 export class pythonPackageCollection extends BaseFoldersView {
@@ -87,5 +74,57 @@ export class pythonPackageCollection extends BaseFoldersView {
     this.pythonPackages = this.pythonPackages;
   }
 
-  contextValue = 'pythonPackageCollection';
+  contextValue = treeContext.COLLECTION;
+}
+
+export class pythonPackage extends BaseFoldersView {
+  constructor(
+    public readonly pipPackageName: string,
+    public readonly pipPackageNumber: string | null,
+    public pythonInterpreterPath: string | undefined,
+    public pythonFiles: pythonFile[],
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
+  ) {
+    super(pipPackageName, collapsibleState);
+    let description = `${this.pipPackageName}`;
+    if (this.pipPackageNumber) {
+      description = `${this.pipPackageNumber}`
+    }
+    this.tooltip = `${this.pipPackageName}`;
+    this.description = description;
+    this.pythonInterpreterPath = this.pythonInterpreterPath;
+    this.pipPackageNumber = this.pipPackageNumber;
+    this.collapsibleState = this.collapsibleState
+    this.pythonFiles = this.pythonFiles
+  }
+
+  iconPath = {
+    light: path.join(__filename, '..', '..', '..', 'svg', 'package_logo.svg'),
+    dark: path.join(__filename, '..', '..', '..', 'svg', 'package_logo.svg')
+  };
+  contextValue = treeContext.PYTHON_PACKAGE;
+}
+
+export class pythonFile extends BaseFoldersView {
+  constructor(
+    public readonly filePath: string,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None
+  ) {
+    super(filePath, collapsibleState);
+    let description = `${this.filePath}`;
+    this.tooltip = `${this.filePath}`;
+    this.description = description;
+    this.collapsibleState = this.collapsibleState
+    this.command = {
+      command: 'pip-package-manager.openPythonFile',
+      title: 'Open Python File',
+      arguments: [this.filePath]
+    }
+  }
+
+  iconPath = {
+    light: path.join(__filename, '..', '..', '..', 'svg', 'python_file.svg'),
+    dark: path.join(__filename, '..', '..', '..', 'svg', 'python_file.svg')
+  };
+  contextValue = treeContext.PYTHON_FILE;
 }

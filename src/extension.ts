@@ -23,6 +23,8 @@ function activate(context: vscode.ExtensionContext) {
 		// requirements commands
 		{ command: 'pip-package-manager.installRequirementFile', callback: async (folder) => runWithProgress(treeViewUtils.installRequirementFile(folder), 'Installing requirement file') },
 		{ command: 'pip-package-manager.scanInstallRequirementsFile', callback: async (folder) => runWithProgress(treeViewUtils.scanInstallRequirementsFile(folder), `Scanning and installing requirement files for ${folder.folderName}`) },
+		// Python Files commands
+		{ command: 'pip-package-manager.openPythonFile', callback: async (filePath) => await treeViewUtils.openPythonFile(filePath) },
 	];
 	// Register commands
 	commands.forEach(({ command, callback }) => vscode.commands.registerCommand(command, callback));
